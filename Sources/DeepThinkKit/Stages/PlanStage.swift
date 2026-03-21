@@ -14,40 +14,14 @@ public struct PlanStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let analysisContext = input.previousOutputs["Analyze"]?.content ?? ""
-        let memoryContext = formatMemoryContext(input.memoryContext)
+        let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = """
-        あなたは計画立案の専門家です。分析結果をもとに、最終回答を導くための方針を立ててください。
-        出力は以下の形式で返してください:
-
-        ## 方針
-        (全体方針を1-2文で)
-
-        ## 必要な観点
-        - (箇条書き)
-
-        ## 処理順序
-        1. (ステップ1)
-        2. (ステップ2)
-        ...
-
-        ## リスク・注意点
-        - (箇条書き)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
+        let systemPrompt = "分析結果をもとに回答方針を立ててください。方針・必要観点・手順を簡潔に箇条書き。確信度(0.0-1.0)も。"
 
         let userPrompt = """
-        以下の分析結果をもとに計画を立ててください:
+        質問: \(truncate(input.query, to: 300))
 
-        【元の質問】
-        \(input.query)
-
-        【分析結果】
-        \(analysisContext)
-        \(memoryContext)
+        分析: \(analysis)
         """
 
         let raw = try await context.modelProvider.generate(

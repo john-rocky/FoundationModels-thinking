@@ -16,42 +16,14 @@ public struct CritiqueStage: Stage {
 
         let solveContent = input.previousOutputs.first(where: {
             $0.value.stageKind == .solve || $0.value.stageKind == .revise
-        })?.value.content ?? ""
+        }).map { summarizeForNextStage($0.value) } ?? ""
 
-        let systemPrompt = """
-        あなたは批評の専門家です。与えられた回答を厳しく評価してください。
-        以下の観点で批評してください:
-
-        ## 弱点
-        - (箇条書き)
-
-        ## 曖昧な箇所
-        - (箇条書き)
-
-        ## 矛盾点
-        - (箇条書き、あれば)
-
-        ## 根拠不足
-        - (箇条書き、あれば)
-
-        ## 改善提案
-        - (箇条書き)
-
-        ## 総合評価
-        (改善の必要度を0.0〜1.0で。0.0=修正不要、1.0=全面修正)
-
-        ## 確信度
-        (この批評の確信度を0.0〜1.0で)
-        """
+        let systemPrompt = "回答の弱点・曖昧さ・改善点を簡潔に箇条書きで指摘してください。確信度(0.0-1.0)も。"
 
         let userPrompt = """
-        以下の回答を批評してください:
+        質問: \(truncate(input.query, to: 200))
 
-        【元の質問】
-        \(input.query)
-
-        【回答】
-        \(solveContent)
+        回答: \(solveContent)
         """
 
         let raw = try await context.modelProvider.generate(

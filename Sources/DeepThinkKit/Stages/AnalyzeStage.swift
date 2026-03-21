@@ -14,36 +14,9 @@ public struct AnalyzeStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let memoryContext = formatMemoryContext(input.memoryContext)
-        let systemPrompt = """
-        あなたは分析の専門家です。与えられた入力を以下の観点で分解・整理してください。
-        出力は以下の形式で返してください:
+        let systemPrompt = "入力を分析し、主要トピック・制約・不明点を箇条書きで整理してください。最後に確信度(0.0-1.0)を書いてください。簡潔に。"
 
-        ## 主要トピック
-        - (箇条書きで列挙)
-
-        ## 制約条件
-        - (箇条書きで列挙)
-
-        ## 未確定点・不明点
-        - (箇条書きで列挙)
-
-        ## 候補タスク
-        - (箇条書きで列挙)
-
-        ## 要約
-        (1-3文の要約)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
-
-        let userPrompt = """
-        以下の入力を分析してください:
-
-        \(input.query)
-        \(memoryContext)
-        """
+        let userPrompt = truncate(input.query, to: 800)
 
         let raw = try await context.modelProvider.generate(
             systemPrompt: systemPrompt,

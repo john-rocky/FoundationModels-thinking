@@ -14,9 +14,9 @@ public struct SummarizeMemoryStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let memoryContent = input.memoryContext.map { entry in
-            "[\(entry.kind.rawValue)] \(entry.content)"
-        }.joined(separator: "\n\n")
+        let memoryContent = input.memoryContext.prefix(5).map { entry in
+            "[\(entry.kind.rawValue)] \(truncate(entry.content, to: 100))"
+        }.joined(separator: "\n")
 
         guard !memoryContent.isEmpty else {
             let output = StageOutput(
@@ -28,19 +28,12 @@ public struct SummarizeMemoryStage: Stage {
             return output
         }
 
-        let systemPrompt = """
-        あなたは要約の専門家です。
-        複数のメモリーエントリを、現在のタスクに関連する情報だけを残して簡潔に要約してください。
-        要約は箇条書きで、各項目は1-2文以内にしてください。
-        """
+        let systemPrompt = "メモリーを現在のタスクに関連する情報だけ残して簡潔に要約してください。箇条書きで。"
 
         let userPrompt = """
-        以下のメモリーを要約してください:
+        タスク: \(truncate(input.query, to: 200))
 
-        【現在のタスク】
-        \(input.query)
-
-        【メモリー】
+        メモリー:
         \(memoryContent)
         """
 

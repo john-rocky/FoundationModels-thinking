@@ -17,28 +17,13 @@ public struct MergeStage: Stage {
         let solveOutputs = input.previousOutputs
             .filter { $0.value.stageKind == .solve }
             .sorted { $0.key < $1.key }
-            .map { "【\($0.key)】\n\($0.value.content)" }
-            .joined(separator: "\n\n---\n\n")
+            .map { "[\($0.key)] \(summarizeForNextStage($0.value))" }
+            .joined(separator: "\n\n")
 
-        let systemPrompt = """
-        あなたは統合の専門家です。複数の異なる観点からの回答を統合して、
-        最も包括的で質の高い回答を作成してください。
-
-        ## 統合回答
-        (本文)
-
-        ## 各観点からの貢献
-        - (どの回答からどの要素を採用したか)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
+        let systemPrompt = "複数の回答を統合して最も質の高い1つの回答を作成してください。簡潔に。確信度(0.0-1.0)も。"
 
         let userPrompt = """
-        以下の複数の回答を統合してください:
-
-        【元の質問】
-        \(input.query)
+        質問: \(truncate(input.query, to: 200))
 
         \(solveOutputs)
         """
@@ -75,31 +60,13 @@ public struct AggregateStage: Stage {
             .filter { $0.value.stageKind == .solve }
             .sorted { $0.key < $1.key }
             .enumerated()
-            .map { "【回答\($0.offset + 1)】\n\($0.element.value.content)" }
-            .joined(separator: "\n\n---\n\n")
+            .map { "[\($0.offset + 1)] \(summarizeForNextStage($0.element.value))" }
+            .joined(separator: "\n\n")
 
-        let systemPrompt = """
-        あなたは合意形成の専門家です。複数の独立した回答を比較し、
-        共通する要素や多数派の見解を特定して、最も信頼性の高い回答を導いてください。
-
-        ## 共通要素
-        - (全回答に共通する点)
-
-        ## 相違点
-        - (回答間で異なる点)
-
-        ## 最終回答
-        (共通性と多数性に基づく回答)
-
-        ## 確信度
-        (0.0〜1.0の数値。一致度が高いほど高い値)
-        """
+        let systemPrompt = "複数の回答を比較し、共通点から最も信頼性の高い回答を導いてください。簡潔に。確信度(0.0-1.0)も。"
 
         let userPrompt = """
-        以下の複数回答を分析し、最も信頼性の高い回答を導いてください:
-
-        【元の質問】
-        \(input.query)
+        質問: \(truncate(input.query, to: 200))
 
         \(solveOutputs)
         """

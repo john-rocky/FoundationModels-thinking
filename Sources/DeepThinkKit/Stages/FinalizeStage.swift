@@ -16,30 +16,12 @@ public struct FinalizeStage: Stage {
 
         let bestAnswer = findBestAnswer(from: input.previousOutputs)
 
-        let systemPrompt = """
-        あなたは編集・仕上げの専門家です。
-        これまでの処理結果を、利用者が読みやすい最終回答に整えてください。
-        余分な内部メモやメタ情報は除き、簡潔で明確な回答にしてください。
-
-        出力形式:
-        ## 回答
-        (最終回答の本文)
-
-        ## 要点まとめ
-        - (重要ポイントを箇条書き)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
+        let systemPrompt = "処理結果を利用者向けの読みやすい最終回答に整えてください。内部メモや確信度は除き、自然な文章で。"
 
         let userPrompt = """
-        以下の処理結果を最終回答に整えてください:
+        質問: \(truncate(input.query, to: 200))
 
-        【元の質問】
-        \(input.query)
-
-        【処理結果】
-        \(bestAnswer)
+        処理結果: \(truncate(bestAnswer, to: 600))
         """
 
         let raw = try await context.modelProvider.generate(

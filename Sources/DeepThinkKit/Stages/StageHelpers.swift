@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - Context Size Limits
+
+private let maxContextLength = 800
+private let maxPreviousOutputLength = 500
+
 // MARK: - Stage Output Parser
 
 func parseOutput(raw: String, kind: StageKind) -> StageOutput {
@@ -22,10 +27,31 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
 
 func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
     guard !entries.isEmpty else { return "" }
-    let formatted = entries.map { entry in
-        "- [\(entry.kind.rawValue)] \(entry.content)"
+    let formatted = entries.prefix(3).map { entry in
+        "- [\(entry.kind.rawValue)] \(truncate(entry.content, to: 100))"
     }.joined(separator: "\n")
     return "\n\n【参考メモリー】\n\(formatted)"
+}
+
+/// Truncate text to a maximum character count, preserving word boundaries
+func truncate(_ text: String, to maxLength: Int = maxPreviousOutputLength) -> String {
+    guard text.count > maxLength else { return text }
+    let truncated = text.prefix(maxLength)
+    // Try to break at last newline or period
+    if let lastBreak = truncated.lastIndex(where: { $0 == "\n" || $0 == "。" || $0 == "." }) {
+        return String(truncated[truncated.startIndex...lastBreak])
+    }
+    return String(truncated) + "..."
+}
+
+/// Extract the most important content from a previous stage output (bullet points preferred)
+func summarizeForNextStage(_ output: StageOutput) -> String {
+    // Prefer bullet points as they're more compact
+    if !output.bulletPoints.isEmpty {
+        let points = output.bulletPoints.prefix(5).map { "- \($0)" }.joined(separator: "\n")
+        return truncate(points, to: maxPreviousOutputLength)
+    }
+    return truncate(output.content, to: maxPreviousOutputLength)
 }
 
 // MARK: - Private Helpers
@@ -42,11 +68,9 @@ private func extractConfidence(from text: String) -> Double {
     for (index, line) in lines.enumerated() {
         let trimmed = line.trimmingCharacters(in: .whitespaces).lowercased()
         if trimmed.contains("確信度") || trimmed.contains("confidence") {
-            // Check the same line for a number
             if let value = extractNumber(from: trimmed) {
                 return value
             }
-            // Check the next line
             if index + 1 < lines.count {
                 let nextLine = lines[index + 1].trimmingCharacters(in: .whitespaces)
                 if let value = extractNumber(from: nextLine) {

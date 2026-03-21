@@ -16,43 +16,18 @@ public struct SolveStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let analyzeContent = input.previousOutputs["Analyze"]?.content ?? ""
-        let planContent = input.previousOutputs["Plan"]?.content ?? ""
-        let memoryContext = formatMemoryContext(input.memoryContext)
+        let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
+        let plan = input.previousOutputs["Plan"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = """
-        あなたは問題解決の専門家です。分析と計画をもとに、質問に対する回答を生成してください。
-        回答は以下の形式で返してください:
+        let systemPrompt = "質問に対する回答を生成してください。簡潔かつ正確に。確信度(0.0-1.0)も末尾に。"
 
-        ## 回答
-        (本文)
-
-        ## 要点
-        - (箇条書き)
-
-        ## 前提条件
-        - (箇条書き、あれば)
-
-        ## 未解決事項
-        - (箇条書き、あれば)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
-
-        let userPrompt = """
-        以下の情報をもとに回答を生成してください:
-
-        【元の質問】
-        \(input.query)
-
-        【分析結果】
-        \(analyzeContent)
-
-        【計画】
-        \(planContent)
-        \(memoryContext)
-        """
+        var userPrompt = "質問: \(truncate(input.query, to: 400))"
+        if !analysis.isEmpty {
+            userPrompt += "\n\n分析: \(analysis)"
+        }
+        if !plan.isEmpty {
+            userPrompt += "\n\n方針: \(plan)"
+        }
 
         let raw = try await context.modelProvider.generate(
             systemPrompt: systemPrompt,

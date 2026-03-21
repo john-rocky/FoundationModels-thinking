@@ -16,38 +16,18 @@ public struct ReviseStage: Stage {
 
         let solveContent = input.previousOutputs.first(where: {
             $0.value.stageKind == .solve || $0.value.stageKind == .revise
-        })?.value.content ?? ""
+        }).map { summarizeForNextStage($0.value) } ?? ""
 
-        let critiqueContent = input.previousOutputs["Critique"]?.content ?? ""
+        let critiqueContent = input.previousOutputs["Critique"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = """
-        あなたは回答改善の専門家です。批評をもとに回答を修正・改善してください。
-        修正後の回答を以下の形式で返してください:
-
-        ## 修正回答
-        (修正された本文)
-
-        ## 修正箇所
-        - (何をどう修正したか、箇条書き)
-
-        ## 残存課題
-        - (まだ改善の余地がある点、箇条書き)
-
-        ## 確信度
-        (0.0〜1.0の数値)
-        """
+        let systemPrompt = "批評をもとに回答を改善してください。改善後の回答を簡潔に。確信度(0.0-1.0)も。"
 
         let userPrompt = """
-        以下の批評をもとに回答を修正してください:
+        質問: \(truncate(input.query, to: 200))
 
-        【元の質問】
-        \(input.query)
+        現在の回答: \(solveContent)
 
-        【現在の回答】
-        \(solveContent)
-
-        【批評】
-        \(critiqueContent)
+        批評: \(critiqueContent)
         """
 
         let raw = try await context.modelProvider.generate(
