@@ -16,12 +16,13 @@ public struct PlanStage: Stage {
 
         let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = "分析結果をもとに回答方針を立ててください。方針・必要観点・手順を簡潔に箇条書き。確信度(0.0-1.0)も。"
+        let systemPrompt = "あなたは回答設計者です。分析結果を踏まえ、最良の回答を組み立てるための具体的な手順を箇条書きで設計してください。各手順は「何を、どう述べるか」を明示すること。回答本文は書かないこと。確信度(0.0-1.0)も末尾に。"
 
         let userPrompt = """
-        質問: \(truncate(input.query, to: 300))
+        質問: \(truncate(input.query, to: 400))
 
-        分析: \(analysis)
+        【分析結果】
+        \(analysis)
         """
 
         let raw = try await context.modelProvider.generate(

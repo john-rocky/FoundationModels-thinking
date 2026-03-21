@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Context Size Limits
 
-private let maxContextLength = 800
-private let maxPreviousOutputLength = 500
+private let maxContextLength = 1200
+private let maxPreviousOutputLength = 800
 
 // MARK: - Stage Output Parser
 
@@ -37,7 +37,6 @@ func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
 func truncate(_ text: String, to maxLength: Int = maxPreviousOutputLength) -> String {
     guard text.count > maxLength else { return text }
     let truncated = text.prefix(maxLength)
-    // Try to break at last newline or period
     if let lastBreak = truncated.lastIndex(where: { $0 == "\n" || $0 == "。" || $0 == "." }) {
         return String(truncated[truncated.startIndex...lastBreak])
     }
@@ -46,9 +45,8 @@ func truncate(_ text: String, to maxLength: Int = maxPreviousOutputLength) -> St
 
 /// Extract the most important content from a previous stage output (bullet points preferred)
 func summarizeForNextStage(_ output: StageOutput) -> String {
-    // Prefer bullet points as they're more compact
     if !output.bulletPoints.isEmpty {
-        let points = output.bulletPoints.prefix(5).map { "- \($0)" }.joined(separator: "\n")
+        let points = output.bulletPoints.prefix(8).map { "- \($0)" }.joined(separator: "\n")
         return truncate(points, to: maxPreviousOutputLength)
     }
     return truncate(output.content, to: maxPreviousOutputLength)

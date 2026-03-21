@@ -16,12 +16,13 @@ public struct FinalizeStage: Stage {
 
         let bestAnswer = findBestAnswer(from: input.previousOutputs)
 
-        let systemPrompt = "処理結果を利用者向けの読みやすい最終回答に整えてください。内部メモや確信度は除き、自然な文章で。"
+        let systemPrompt = "以下の回答をそのまま最終出力として整形してください。内容の追加・削除・言い換えはしないこと。確信度の数値や内部メモのみ除去し、読みやすく整えるだけにしてください。"
 
+        // 質問を渡さない（渡すとモデルが再回答してしまう）
         let userPrompt = """
-        質問: \(truncate(input.query, to: 200))
+        以下を最終形式に整形してください：
 
-        処理結果: \(truncate(bestAnswer, to: 600))
+        \(truncate(bestAnswer, to: 1000))
         """
 
         let raw = try await context.modelProvider.generate(

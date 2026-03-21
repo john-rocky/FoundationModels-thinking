@@ -20,14 +20,16 @@ public struct ReviseStage: Stage {
 
         let critiqueContent = input.previousOutputs["Critique"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = "批評をもとに回答を改善してください。改善後の回答を簡潔に。確信度(0.0-1.0)も。"
+        let systemPrompt = "批評で指摘された各問題点を一つずつ修正し、改善後の完全な回答を出力してください。批評にない部分は元の回答を維持すること。何を修正したか末尾に簡潔に記載。確信度(0.0-1.0)も末尾に。"
 
         let userPrompt = """
-        質問: \(truncate(input.query, to: 200))
+        質問: \(truncate(input.query, to: 300))
 
-        現在の回答: \(solveContent)
+        【現在の回答】
+        \(solveContent)
 
-        批評: \(critiqueContent)
+        【批評・改善指示】
+        \(critiqueContent)
         """
 
         let raw = try await context.modelProvider.generate(

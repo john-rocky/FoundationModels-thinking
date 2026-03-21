@@ -14,9 +14,9 @@ public struct AnalyzeStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let systemPrompt = "入力を分析し、主要トピック・制約・不明点を箇条書きで整理してください。最後に確信度(0.0-1.0)を書いてください。簡潔に。"
+        let systemPrompt = "あなたは問題分析の専門家です。質問を分解し、以下を箇条書きで出力してください：(1)核心的な問い (2)必要な知識領域 (3)隠れた前提や制約 (4)曖昧な点。回答は書かないこと。確信度(0.0-1.0)も末尾に。"
 
-        let userPrompt = truncate(input.query, to: 800)
+        let userPrompt = truncate(input.query, to: 1000)
 
         let raw = try await context.modelProvider.generate(
             systemPrompt: systemPrompt,

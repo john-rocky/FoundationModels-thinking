@@ -29,7 +29,7 @@ public struct DirectPipeline: Pipeline, Sendable {
         )
 
         let raw = try await context.modelProvider.generate(
-            systemPrompt: nil,
+            systemPrompt: "質問に対して正確で分かりやすい回答を生成してください。",
             userPrompt: query
         )
 

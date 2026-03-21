@@ -19,14 +19,14 @@ public struct SolveStage: Stage {
         let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
         let plan = input.previousOutputs["Plan"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = "質問に対する回答を生成してください。簡潔かつ正確に。確信度(0.0-1.0)も末尾に。"
+        let systemPrompt = "以下の分析と方針に従って回答を生成してください。分析で特定された観点を漏れなくカバーし、方針の手順に沿って構成すること。分析・方針を無視して独自に回答しないこと。確信度(0.0-1.0)も末尾に。"
 
-        var userPrompt = "質問: \(truncate(input.query, to: 400))"
+        var userPrompt = "質問: \(truncate(input.query, to: 500))"
         if !analysis.isEmpty {
-            userPrompt += "\n\n分析: \(analysis)"
+            userPrompt += "\n\n【分析結果】\n\(analysis)"
         }
         if !plan.isEmpty {
-            userPrompt += "\n\n方針: \(plan)"
+            userPrompt += "\n\n【回答方針】\n\(plan)"
         }
 
         let raw = try await context.modelProvider.generate(
