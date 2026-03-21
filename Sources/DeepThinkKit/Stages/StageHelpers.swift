@@ -1,0 +1,97 @@
+import Foundation
+
+// MARK: - Stage Output Parser
+
+func parseOutput(raw: String, kind: StageKind) -> StageOutput {
+    let content = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let bulletPoints = extractBulletPoints(from: content)
+    let confidence = extractConfidence(from: content)
+    let unresolvedIssues = extractSection(from: content, headers: ["未解決事項", "残存課題", "未確定点", "不明点"])
+    let assumptions = extractSection(from: content, headers: ["前提条件", "前提"])
+
+    return StageOutput(
+        stageKind: kind,
+        content: content,
+        bulletPoints: bulletPoints,
+        confidence: confidence,
+        unresolvedIssues: unresolvedIssues,
+        assumptions: assumptions
+    )
+}
+
+func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
+    guard !entries.isEmpty else { return "" }
+    let formatted = entries.map { entry in
+        "- [\(entry.kind.rawValue)] \(entry.content)"
+    }.joined(separator: "\n")
+    return "\n\n【参考メモリー】\n\(formatted)"
+}
+
+// MARK: - Private Helpers
+
+private func extractBulletPoints(from text: String) -> [String] {
+    text.components(separatedBy: .newlines)
+        .map { $0.trimmingCharacters(in: .whitespaces) }
+        .filter { $0.hasPrefix("- ") || $0.hasPrefix("* ") }
+        .map { String($0.dropFirst(2)) }
+}
+
+private func extractConfidence(from text: String) -> Double {
+    let lines = text.components(separatedBy: .newlines)
+    for (index, line) in lines.enumerated() {
+        let trimmed = line.trimmingCharacters(in: .whitespaces).lowercased()
+        if trimmed.contains("確信度") || trimmed.contains("confidence") {
+            // Check the same line for a number
+            if let value = extractNumber(from: trimmed) {
+                return value
+            }
+            // Check the next line
+            if index + 1 < lines.count {
+                let nextLine = lines[index + 1].trimmingCharacters(in: .whitespaces)
+                if let value = extractNumber(from: nextLine) {
+                    return value
+                }
+            }
+        }
+    }
+    return 0.5
+}
+
+private func extractNumber(from text: String) -> Double? {
+    let pattern = #"(0?\.\d+|1\.0|0|1)"#
+    guard let regex = try? NSRegularExpression(pattern: pattern),
+          let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+          let range = Range(match.range(at: 1), in: text) else {
+        return nil
+    }
+    return Double(text[range])
+}
+
+private func extractSection(from text: String, headers: [String]) -> [String] {
+    let lines = text.components(separatedBy: .newlines)
+    var inSection = false
+    var results: [String] = []
+
+    for line in lines {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        let lower = trimmed.lowercased()
+
+        if trimmed.hasPrefix("##") || trimmed.hasPrefix("**") {
+            inSection = headers.contains(where: { lower.contains($0.lowercased()) })
+            continue
+        }
+
+        if inSection {
+            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+                results.append(String(trimmed.dropFirst(2)))
+            } else if trimmed.isEmpty {
+                continue
+            } else if trimmed.hasPrefix("##") {
+                break
+            }
+        }
+    }
+
+    return results
+}

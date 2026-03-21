@@ -1,0 +1,32 @@
+name: DeepThinkApp
+options:
+  bundleIdPrefix: com.deepthinkkit
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+
+packages:
+  DeepThinkKit:
+    path: "."
+
+targets:
+  DeepThinkApp:
+    type: application
+    platform: [iOS, macOS]
+    sources:
+      - path: App/DeepThinkApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.deepthinkkit.app
+        PRODUCT_NAME: DeepThink
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_CFBundleDisplayName: DeepThink
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: true
+    dependencies:
+      - package: DeepThinkKit
