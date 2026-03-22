@@ -27,9 +27,11 @@ public struct CritiqueStage: Stage {
         \(solveContent)
         """
 
-        let raw = try await context.modelProvider.generate(
+        let raw = try await streamingGenerate(
+            stageName: name,
             systemPrompt: systemPrompt,
-            userPrompt: userPrompt
+            userPrompt: userPrompt,
+            context: context
         )
 
         let output = parseOutput(raw: raw, kind: .critique)

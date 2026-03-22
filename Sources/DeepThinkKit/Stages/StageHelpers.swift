@@ -5,6 +5,28 @@ import Foundation
 private let maxContextLength = 1200
 private let maxPreviousOutputLength = 800
 
+// MARK: - Streaming Generate Helper
+
+/// Streams generation from the model provider and emits partial content events.
+/// Returns the final accumulated text.
+func streamingGenerate(
+    stageName: String,
+    systemPrompt: String?,
+    userPrompt: String,
+    context: PipelineContext
+) async throws -> String {
+    var finalContent = ""
+    let stream = context.modelProvider.generateStream(
+        systemPrompt: systemPrompt,
+        userPrompt: userPrompt
+    )
+    for try await partial in stream {
+        finalContent = partial
+        await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+    }
+    return finalContent
+}
+
 // MARK: - Stage Output Parser
 
 func parseOutput(raw: String, kind: StageKind) -> StageOutput {

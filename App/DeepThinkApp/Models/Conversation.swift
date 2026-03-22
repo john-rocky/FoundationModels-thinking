@@ -41,6 +41,7 @@ struct ThinkingStep: Identifiable {
     var status: StepStatus
     var output: StageOutput?
     var branchOutputs: [String: StageOutput]
+    var streamingContent: String
 
     enum StepStatus {
         case running
@@ -61,6 +62,7 @@ struct ThinkingStep: Identifiable {
         self.status = .running
         self.output = nil
         self.branchOutputs = [:]
+        self.streamingContent = ""
     }
 }
 

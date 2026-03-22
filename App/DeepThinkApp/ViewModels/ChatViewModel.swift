@@ -19,6 +19,8 @@ final class ChatViewModel {
     var currentPipelineName: String?
     var expectedStageCount: Int = 0
     var activeBranchNames: [String] = []
+    var currentStreamingStageName: String?
+    var currentStreamingContent: String = ""
 
     private let longTermMemory = LongTermMemory()
 
@@ -83,6 +85,8 @@ final class ChatViewModel {
             currentPipelineName = nil
             expectedStageCount = 0
             activeBranchNames = []
+            currentStreamingStageName = nil
+            currentStreamingContent = ""
         }
 
         do {
@@ -164,11 +168,24 @@ final class ChatViewModel {
         case .stageStarted(let name, let kind, let index):
             let step = ThinkingStep(stageName: name, stageKind: kind, index: index)
             thinkingSteps.append(step)
+            currentStreamingStageName = name
+            currentStreamingContent = ""
+
+        case .stageStreamingContent(let name, let content):
+            currentStreamingStageName = name
+            currentStreamingContent = content
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
+                thinkingSteps[idx].streamingContent = content
+            }
 
         case .stageCompleted(let name, _, let output, _):
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name && $0.output == nil }) {
                 thinkingSteps[idx].status = .completed
                 thinkingSteps[idx].output = output
+                thinkingSteps[idx].streamingContent = ""
+            }
+            if currentStreamingStageName == name {
+                currentStreamingContent = ""
             }
 
         case .stageFailed(let name, let error):

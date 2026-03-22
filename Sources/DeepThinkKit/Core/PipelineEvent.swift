@@ -10,6 +10,9 @@ public enum PipelineEvent: Sendable {
     /// A stage is about to begin execution
     case stageStarted(stageName: String, stageKind: StageKind, index: Int)
 
+    /// Streaming partial content from a stage
+    case stageStreamingContent(stageName: String, content: String)
+
     /// A stage completed successfully
     case stageCompleted(stageName: String, stageKind: StageKind, output: StageOutput, index: Int)
 

@@ -43,6 +43,11 @@ struct ChatView: View {
                         }
                     }
                 }
+                .onChange(of: viewModel.currentStreamingContent.count) {
+                    if viewModel.isProcessing {
+                        proxy.scrollTo("thinking", anchor: .bottom)
+                    }
+                }
                 .onTapGesture {
                     #if os(iOS)
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

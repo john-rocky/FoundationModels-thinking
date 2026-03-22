@@ -29,9 +29,11 @@ public struct SolveStage: Stage {
             userPrompt += "\n\n【回答方針】\n\(plan)"
         }
 
-        let raw = try await context.modelProvider.generate(
+        let raw = try await streamingGenerate(
+            stageName: name,
             systemPrompt: systemPrompt,
-            userPrompt: userPrompt
+            userPrompt: userPrompt,
+            context: context
         )
 
         let output = parseOutput(raw: raw, kind: .solve)

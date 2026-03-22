@@ -30,6 +30,38 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
         }
     }
 
+    public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                guard SystemLanguageModel.default.isAvailable else {
+                    continuation.finish(throwing: StageError.modelUnavailable)
+                    return
+                }
+
+                let session: LanguageModelSession
+                if let systemPrompt, !systemPrompt.isEmpty {
+                    session = LanguageModelSession(instructions: systemPrompt)
+                } else {
+                    session = LanguageModelSession()
+                }
+
+                do {
+                    let stream = session.streamResponse(to: userPrompt)
+                    for try await partial in stream {
+                        continuation.yield(partial.content)
+                    }
+                    continuation.finish()
+                } catch {
+                    if Self.isSafetyFilterError(error) {
+                        continuation.finish(throwing: ModelError.safetyFilterViolation)
+                    } else {
+                        continuation.finish(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
     private static func isSafetyFilterError(_ error: Error) -> Bool {
         let desc = String(describing: error)
         if desc.contains("guardrail") || desc.contains("unsafe") {

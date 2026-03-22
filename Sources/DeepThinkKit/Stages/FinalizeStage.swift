@@ -25,9 +25,11 @@ public struct FinalizeStage: Stage {
         \(truncate(bestAnswer, to: 1000))
         """
 
-        let raw = try await context.modelProvider.generate(
+        let raw = try await streamingGenerate(
+            stageName: name,
             systemPrompt: systemPrompt,
-            userPrompt: userPrompt
+            userPrompt: userPrompt,
+            context: context
         )
 
         let output = parseOutput(raw: raw, kind: .finalize)
