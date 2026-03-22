@@ -44,6 +44,7 @@ public func executeWithRetry(
             await context.traceCollector.record(
                 event: .retry(stage: stage.name, attempt: attempt, error: error)
             )
+            await context.emit(.stageRetrying(stageName: stage.name, attempt: attempt))
             if attempt < stage.maxRetries {
                 try await Task.sleep(for: .milliseconds(100 * attempt))
             }

@@ -23,7 +23,7 @@ struct ChatView: View {
                         }
 
                         if viewModel.isProcessing {
-                            ThinkingIndicatorView()
+                            ThinkingStreamView()
                                 .id("thinking")
                         }
                     }
@@ -33,6 +33,13 @@ struct ChatView: View {
                     if let lastId = viewModel.currentConversation?.messages.last?.id {
                         withAnimation {
                             proxy.scrollTo(lastId, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: viewModel.thinkingSteps.count) {
+                    if viewModel.isProcessing {
+                        withAnimation {
+                            proxy.scrollTo("thinking", anchor: .bottom)
                         }
                     }
                 }

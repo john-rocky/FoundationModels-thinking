@@ -11,6 +11,7 @@ public actor PipelineContext {
     public nonisolated let modelProvider: any ModelProvider
 
     private var stageOutputs: [String: StageOutput] = [:]
+    private var eventContinuation: AsyncStream<PipelineEvent>.Continuation?
 
     public init(
         executionId: String = UUID().uuidString,
@@ -39,6 +40,23 @@ public actor PipelineContext {
     public func allOutputs() -> [String: StageOutput] {
         stageOutputs
     }
+
+    // MARK: - Event Streaming
+
+    public func setEventContinuation(_ continuation: AsyncStream<PipelineEvent>.Continuation) {
+        self.eventContinuation = continuation
+    }
+
+    public func emit(_ event: PipelineEvent) {
+        eventContinuation?.yield(event)
+    }
+
+    public func finishEventStream() {
+        eventContinuation?.finish()
+        eventContinuation = nil
+    }
+
+    // MARK: - Input Building
 
     public func buildInput(query: String, memoryContext: [MemoryEntry] = []) -> StageInput {
         StageInput(

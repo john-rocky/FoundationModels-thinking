@@ -25,23 +25,33 @@ public struct SequentialPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .pipelineStarted(name: name, query: query)
         )
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: stages.count))
 
         var allOutputs: [StageOutput] = []
 
-        for (index, stage) in stages.enumerated() {
-            guard index < configuration.maxStages else {
-                break
+        do {
+            for (index, stage) in stages.enumerated() {
+                guard index < configuration.maxStages else {
+                    break
+                }
+
+                await context.emit(.stageStarted(stageName: stage.name, stageKind: stage.kind, index: index))
+
+                let input = await context.buildInput(query: query)
+                let output = try await executeWithRetry(
+                    stage: stage,
+                    input: input,
+                    context: context
+                )
+
+                allOutputs.append(output)
+                await context.setOutput(output, for: stage.name)
+                await context.emit(.stageCompleted(stageName: stage.name, stageKind: stage.kind, output: output, index: index))
             }
-
-            let input = await context.buildInput(query: query)
-            let output = try await executeWithRetry(
-                stage: stage,
-                input: input,
-                context: context
-            )
-
-            allOutputs.append(output)
-            await context.setOutput(output, for: stage.name)
+        } catch {
+            await context.emit(.pipelineFailed(error: "\(error)"))
+            await context.finishEventStream()
+            throw error
         }
 
         let endTime = Date.now
@@ -54,7 +64,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
             )
         )
 
-        return PipelineResult(
+        let result = PipelineResult(
             pipelineName: name,
             query: query,
             finalOutput: allOutputs.last ?? StageOutput(stageKind: .finalize, content: ""),
@@ -63,5 +73,10 @@ public struct SequentialPipeline: Pipeline, Sendable {
             startTime: startTime,
             endTime: endTime
         )
+
+        await context.emit(.pipelineCompleted(result: result))
+        await context.finishEventStream()
+
+        return result
     }
 }

@@ -31,6 +31,39 @@ enum MessageRole: String, Sendable {
     case system
 }
 
+// MARK: - Thinking Step
+
+struct ThinkingStep: Identifiable {
+    let id: String
+    let stageName: String
+    let stageKind: StageKind
+    let index: Int
+    var status: StepStatus
+    var output: StageOutput?
+    var branchOutputs: [String: StageOutput]
+
+    enum StepStatus {
+        case running
+        case completed
+        case failed(String)
+        case retrying(attempt: Int)
+    }
+
+    init(
+        stageName: String,
+        stageKind: StageKind,
+        index: Int
+    ) {
+        self.id = UUID().uuidString
+        self.stageName = stageName
+        self.stageKind = stageKind
+        self.index = index
+        self.status = .running
+        self.output = nil
+        self.branchOutputs = [:]
+    }
+}
+
 // MARK: - Conversation
 
 struct Conversation: Identifiable, Sendable {

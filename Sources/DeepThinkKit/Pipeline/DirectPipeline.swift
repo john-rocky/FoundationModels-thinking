@@ -23,10 +23,12 @@ public struct DirectPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .pipelineStarted(name: name, query: query)
         )
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 1))
 
         await context.traceCollector.record(
             event: .stageStarted(stage: "Direct", kind: .solve, input: query)
         )
+        await context.emit(.stageStarted(stageName: "Direct", stageKind: .solve, index: 0))
 
         let raw: String
         do {
@@ -35,10 +37,16 @@ public struct DirectPipeline: Pipeline, Sendable {
                 userPrompt: query
             )
         } catch {
+            let stageError: Error
             if case ModelError.safetyFilterViolation = error {
-                throw StageError.contentFiltered(stage: "Direct")
+                stageError = StageError.contentFiltered(stage: "Direct")
+            } else {
+                stageError = error
             }
-            throw error
+            await context.emit(.stageFailed(stageName: "Direct", error: "\(stageError)"))
+            await context.emit(.pipelineFailed(error: "\(stageError)"))
+            await context.finishEventStream()
+            throw stageError
         }
 
         let output = StageOutput(
@@ -51,6 +59,7 @@ public struct DirectPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .stageCompleted(stage: "Direct", output: output)
         )
+        await context.emit(.stageCompleted(stageName: "Direct", stageKind: .solve, output: output, index: 0))
 
         let endTime = Date.now
         let trace = await context.traceCollector.allRecords()
@@ -62,7 +71,7 @@ public struct DirectPipeline: Pipeline, Sendable {
             )
         )
 
-        return PipelineResult(
+        let result = PipelineResult(
             pipelineName: name,
             query: query,
             finalOutput: output,
@@ -71,5 +80,10 @@ public struct DirectPipeline: Pipeline, Sendable {
             startTime: startTime,
             endTime: endTime
         )
+
+        await context.emit(.pipelineCompleted(result: result))
+        await context.finishEventStream()
+
+        return result
     }
 }

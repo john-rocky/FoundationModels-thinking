@@ -14,6 +14,12 @@ final class ChatViewModel {
     var showMemoryBrowser = false
     var errorMessage: String?
 
+    // Streaming thinking state
+    var thinkingSteps: [ThinkingStep] = []
+    var currentPipelineName: String?
+    var expectedStageCount: Int = 0
+    var activeBranchNames: [String] = []
+
     private let longTermMemory = LongTermMemory()
 
     var currentConversation: Conversation? {
@@ -71,7 +77,13 @@ final class ChatViewModel {
     }
 
     private func processMessage(text: String, conversationId: String) async {
-        defer { isProcessing = false }
+        defer {
+            isProcessing = false
+            thinkingSteps = []
+            currentPipelineName = nil
+            expectedStageCount = 0
+            activeBranchNames = []
+        }
 
         do {
             let modelProvider = FoundationModelProvider()
@@ -80,11 +92,23 @@ final class ChatViewModel {
                 longTermMemory: longTermMemory
             )
 
+            let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
+            await context.setEventContinuation(continuation)
+
             let pipeline = PipelineFactory.create(
                 kind: selectedPipelineKind
             )
 
-            let result = try await pipeline.execute(query: text, context: context)
+            let resultTask = Task<PipelineResult, Error> {
+                try await pipeline.execute(query: text, context: context)
+            }
+
+            // Consume events on MainActor for real-time UI updates
+            for await event in stream {
+                handlePipelineEvent(event)
+            }
+
+            let result = try await resultTask.value
 
             let assistantMessage = ChatMessage(
                 role: .assistant,
@@ -128,6 +152,67 @@ final class ChatViewModel {
                     conversations[index] = conversation
                 }
             }
+        }
+    }
+
+    private func handlePipelineEvent(_ event: PipelineEvent) {
+        switch event {
+        case .pipelineStarted(let name, let count):
+            currentPipelineName = name
+            expectedStageCount = count
+
+        case .stageStarted(let name, let kind, let index):
+            let step = ThinkingStep(stageName: name, stageKind: kind, index: index)
+            thinkingSteps.append(step)
+
+        case .stageCompleted(let name, _, let output, _):
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name && $0.output == nil }) {
+                thinkingSteps[idx].status = .completed
+                thinkingSteps[idx].output = output
+            }
+
+        case .stageFailed(let name, let error):
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
+                thinkingSteps[idx].status = .failed(error)
+            }
+
+        case .stageRetrying(let name, let attempt):
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
+                thinkingSteps[idx].status = .retrying(attempt: attempt)
+            }
+
+        case .branchesStarted(let names):
+            activeBranchNames = names
+            let step = ThinkingStep(
+                stageName: "Parallel Solve (\(names.count) branches)",
+                stageKind: .solve,
+                index: thinkingSteps.count
+            )
+            thinkingSteps.append(step)
+
+        case .branchCompleted(let name, let output):
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName.hasPrefix("Parallel") }) {
+                thinkingSteps[idx].branchOutputs[name] = output
+                if thinkingSteps[idx].branchOutputs.count == activeBranchNames.count {
+                    thinkingSteps[idx].status = .completed
+                }
+            }
+
+        case .loopIterationStarted(let iteration, let max):
+            let step = ThinkingStep(
+                stageName: "Loop \(iteration)/\(max)",
+                stageKind: .critique,
+                index: thinkingSteps.count
+            )
+            thinkingSteps.append(step)
+
+        case .loopEnded:
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName.hasPrefix("Loop") }) {
+                thinkingSteps[idx].status = .completed
+            }
+
+        case .pipelineCompleted, .pipelineFailed:
+            break
         }
     }
 }

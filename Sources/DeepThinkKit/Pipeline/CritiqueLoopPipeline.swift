@@ -26,7 +26,12 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             event: .pipelineStarted(name: name, query: query)
         )
 
+        // Stage count: Analyze + Solve + (Critique + Revise) * maxLoops + Finalize
+        let estimatedStageCount = 2 + configuration.maxCritiqueReviseLoops * 2 + 1
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: estimatedStageCount))
+
         var allOutputs: [StageOutput] = []
+        var stageIndex = 0
         let checker = ConvergenceChecker(
             policy: LoopPolicy(
                 maxIterations: configuration.maxCritiqueReviseLoops,
@@ -35,108 +40,136 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             )
         )
 
-        // Stage 1: Analyze
-        let analyzeInput = await context.buildInput(query: query)
-        let analyzeOutput = try await executeWithRetry(
-            stage: AnalyzeStage(),
-            input: analyzeInput,
-            context: context
-        )
-        allOutputs.append(analyzeOutput)
-        await context.setOutput(analyzeOutput, for: "Analyze")
-
-        // Stage 2: Solve
-        let solveInput = await context.buildInput(query: query)
-        let solveOutput = try await executeWithRetry(
-            stage: SolveStage(),
-            input: solveInput,
-            context: context
-        )
-        allOutputs.append(solveOutput)
-        await context.setOutput(solveOutput, for: "Solve")
-
-        // Stage 3: Critique -> Revise loop
-        var previousConfidence = solveOutput.confidence
-        var bestOutput = solveOutput
-
-        for iteration in 1...configuration.maxCritiqueReviseLoops {
-            // Critique
-            let critiqueInput = await context.buildInput(query: query)
-            let critiqueOutput = try await executeWithRetry(
-                stage: CritiqueStage(),
-                input: critiqueInput,
+        do {
+            // Stage 1: Analyze
+            await context.emit(.stageStarted(stageName: "Analyze", stageKind: .analyze, index: stageIndex))
+            let analyzeInput = await context.buildInput(query: query)
+            let analyzeOutput = try await executeWithRetry(
+                stage: AnalyzeStage(),
+                input: analyzeInput,
                 context: context
             )
-            allOutputs.append(critiqueOutput)
-            await context.setOutput(critiqueOutput, for: "Critique")
+            allOutputs.append(analyzeOutput)
+            await context.setOutput(analyzeOutput, for: "Analyze")
+            await context.emit(.stageCompleted(stageName: "Analyze", stageKind: .analyze, output: analyzeOutput, index: stageIndex))
+            stageIndex += 1
 
-            // Revise
-            let reviseInput = await context.buildInput(query: query)
-            let reviseOutput = try await executeWithRetry(
-                stage: ReviseStage(),
-                input: reviseInput,
+            // Stage 2: Solve
+            await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
+            let solveInput = await context.buildInput(query: query)
+            let solveOutput = try await executeWithRetry(
+                stage: SolveStage(),
+                input: solveInput,
                 context: context
             )
-            allOutputs.append(reviseOutput)
-            await context.setOutput(reviseOutput, for: "Revise")
+            allOutputs.append(solveOutput)
+            await context.setOutput(solveOutput, for: "Solve")
+            await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
+            stageIndex += 1
 
-            let decision = checker.shouldContinue(
-                iteration: iteration,
-                previousConfidence: previousConfidence,
-                currentConfidence: reviseOutput.confidence
+            // Stage 3: Critique -> Revise loop
+            var previousConfidence = solveOutput.confidence
+            var bestOutput = solveOutput
+
+            for iteration in 1...configuration.maxCritiqueReviseLoops {
+                await context.emit(.loopIterationStarted(iteration: iteration, maxIterations: configuration.maxCritiqueReviseLoops))
+
+                // Critique
+                await context.emit(.stageStarted(stageName: "Critique", stageKind: .critique, index: stageIndex))
+                let critiqueInput = await context.buildInput(query: query)
+                let critiqueOutput = try await executeWithRetry(
+                    stage: CritiqueStage(),
+                    input: critiqueInput,
+                    context: context
+                )
+                allOutputs.append(critiqueOutput)
+                await context.setOutput(critiqueOutput, for: "Critique")
+                await context.emit(.stageCompleted(stageName: "Critique", stageKind: .critique, output: critiqueOutput, index: stageIndex))
+                stageIndex += 1
+
+                // Revise
+                await context.emit(.stageStarted(stageName: "Revise", stageKind: .revise, index: stageIndex))
+                let reviseInput = await context.buildInput(query: query)
+                let reviseOutput = try await executeWithRetry(
+                    stage: ReviseStage(),
+                    input: reviseInput,
+                    context: context
+                )
+                allOutputs.append(reviseOutput)
+                await context.setOutput(reviseOutput, for: "Revise")
+                await context.emit(.stageCompleted(stageName: "Revise", stageKind: .revise, output: reviseOutput, index: stageIndex))
+                stageIndex += 1
+
+                let decision = checker.shouldContinue(
+                    iteration: iteration,
+                    previousConfidence: previousConfidence,
+                    currentConfidence: reviseOutput.confidence
+                )
+
+                await context.traceCollector.record(
+                    event: .loopDecision(stage: "CritiqueLoop", decision: decision)
+                )
+
+                if reviseOutput.confidence > bestOutput.confidence {
+                    bestOutput = reviseOutput
+                }
+
+                switch decision {
+                case .continue:
+                    previousConfidence = reviseOutput.confidence
+                    await context.setOutput(reviseOutput, for: "Solve")
+                case .stop(let reason):
+                    if reason == .degradation {
+                        await context.setOutput(bestOutput, for: "Revise")
+                    }
+                    let reasonStr = "\(reason)"
+                    await context.emit(.loopEnded(reason: reasonStr))
+                    break
+                }
+
+                if case .stop = decision { break }
+            }
+
+            // Stage 4: Finalize
+            await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
+            let finalizeInput = await context.buildInput(query: query)
+            let finalizeOutput = try await executeWithRetry(
+                stage: FinalizeStage(),
+                input: finalizeInput,
+                context: context
             )
+            allOutputs.append(finalizeOutput)
+            await context.emit(.stageCompleted(stageName: "Finalize", stageKind: .finalize, output: finalizeOutput, index: stageIndex))
+
+            let endTime = Date.now
+            let trace = await context.traceCollector.allRecords()
 
             await context.traceCollector.record(
-                event: .loopDecision(stage: "CritiqueLoop", decision: decision)
+                event: .pipelineCompleted(
+                    name: name,
+                    duration: endTime.timeIntervalSince(startTime)
+                )
             )
 
-            if reviseOutput.confidence > bestOutput.confidence {
-                bestOutput = reviseOutput
-            }
+            let result = PipelineResult(
+                pipelineName: name,
+                query: query,
+                finalOutput: finalizeOutput,
+                stageOutputs: allOutputs,
+                trace: trace,
+                startTime: startTime,
+                endTime: endTime
+            )
 
-            switch decision {
-            case .continue:
-                previousConfidence = reviseOutput.confidence
-                // Update Solve output with revised version for next iteration
-                await context.setOutput(reviseOutput, for: "Solve")
-            case .stop(let reason):
-                if reason == .degradation {
-                    // Rollback: use best output so far
-                    await context.setOutput(bestOutput, for: "Revise")
-                }
-                break
-            }
+            await context.emit(.pipelineCompleted(result: result))
+            await context.finishEventStream()
 
-            if case .stop = decision { break }
+            return result
+
+        } catch {
+            await context.emit(.pipelineFailed(error: "\(error)"))
+            await context.finishEventStream()
+            throw error
         }
-
-        // Stage 4: Finalize
-        let finalizeInput = await context.buildInput(query: query)
-        let finalizeOutput = try await executeWithRetry(
-            stage: FinalizeStage(),
-            input: finalizeInput,
-            context: context
-        )
-        allOutputs.append(finalizeOutput)
-
-        let endTime = Date.now
-        let trace = await context.traceCollector.allRecords()
-
-        await context.traceCollector.record(
-            event: .pipelineCompleted(
-                name: name,
-                duration: endTime.timeIntervalSince(startTime)
-            )
-        )
-
-        return PipelineResult(
-            pipelineName: name,
-            query: query,
-            finalOutput: finalizeOutput,
-            stageOutputs: allOutputs,
-            trace: trace,
-            startTime: startTime,
-            endTime: endTime
-        )
     }
 }
