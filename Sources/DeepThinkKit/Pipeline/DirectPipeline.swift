@@ -28,10 +28,18 @@ public struct DirectPipeline: Pipeline, Sendable {
             event: .stageStarted(stage: "Direct", kind: .solve, input: query)
         )
 
-        let raw = try await context.modelProvider.generate(
-            systemPrompt: "質問に対して正確で分かりやすい回答を生成してください。",
-            userPrompt: query
-        )
+        let raw: String
+        do {
+            raw = try await context.modelProvider.generate(
+                systemPrompt: "質問に対して正確で分かりやすい回答を生成してください。",
+                userPrompt: query
+            )
+        } catch {
+            if case ModelError.safetyFilterViolation = error {
+                throw StageError.contentFiltered(stage: "Direct")
+            }
+            throw error
+        }
 
         let output = StageOutput(
             stageKind: .solve,

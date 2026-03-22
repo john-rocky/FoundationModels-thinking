@@ -30,6 +30,16 @@ public func executeWithRetry(
             let output = try await stage.execute(input: input, context: context)
             return output
         } catch {
+            if let modelError = error as? ModelError {
+                switch modelError {
+                case .safetyFilterViolation:
+                    throw StageError.contentFiltered(stage: stage.name)
+                case .modelUnavailable:
+                    throw StageError.modelUnavailable
+                default:
+                    break
+                }
+            }
             lastError = error
             await context.traceCollector.record(
                 event: .retry(stage: stage.name, attempt: attempt, error: error)

@@ -13,4 +13,5 @@ public enum ModelError: Error, Sendable {
     case generationFailed(String)
     case contextTooLong
     case rateLimited
+    case safetyFilterViolation
 }

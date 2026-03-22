@@ -86,6 +86,7 @@ public enum StageError: Error, Sendable, LocalizedError {
     case convergenceFailed(stage: String, iterations: Int)
     case memoryRetrievalFailed(underlying: Error)
     case pipelineAborted(reason: String)
+    case contentFiltered(stage: String)
     case modelUnavailable
 
     public var errorDescription: String? {
@@ -102,6 +103,8 @@ public enum StageError: Error, Sendable, LocalizedError {
             "[\(stage)] Did not converge after \(iterations) iterations"
         case .memoryRetrievalFailed(let err):
             "Memory retrieval failed: \(err.localizedDescription)"
+        case .contentFiltered(let stage):
+            "[\(stage)] Apple Intelligenceの安全フィルターにより、この入力は処理できませんでした。入力を言い換えるか、より具体的な表現に変更してお試しください。"
         case .pipelineAborted(let reason):
             "Pipeline aborted: \(reason)"
         case .modelUnavailable:

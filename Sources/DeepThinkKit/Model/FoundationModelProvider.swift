@@ -19,7 +19,23 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
         } else {
             session = LanguageModelSession()
         }
-        let response = try await session.respond(to: userPrompt)
-        return response.content
+        do {
+            let response = try await session.respond(to: userPrompt)
+            return response.content
+        } catch {
+            if Self.isSafetyFilterError(error) {
+                throw ModelError.safetyFilterViolation
+            }
+            throw error
+        }
+    }
+
+    private static func isSafetyFilterError(_ error: Error) -> Bool {
+        let desc = String(describing: error)
+        if desc.contains("guardrail") || desc.contains("unsafe") {
+            return true
+        }
+        let localized = error.localizedDescription
+        return localized.contains("unsafe") || localized.contains("guardrail")
     }
 }
