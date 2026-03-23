@@ -23,7 +23,7 @@ public struct ReviseStage: Stage {
         let systemPrompt = "批評で指摘された各問題点を一つずつ修正し、改善後の完全な回答を出力してください。批評にない部分は元の回答を維持すること。何を修正したか末尾に簡潔に記載。確信度(0.0-1.0)も末尾に。"
 
         let userPrompt = """
-        質問: \(truncate(input.query, to: 300))
+        質問: \(truncate(input.query, to: 200))
 
         【現在の回答】
         \(solveContent)

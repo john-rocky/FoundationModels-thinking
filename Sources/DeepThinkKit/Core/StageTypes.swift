@@ -87,6 +87,7 @@ public enum StageError: Error, Sendable, LocalizedError {
     case memoryRetrievalFailed(underlying: Error)
     case pipelineAborted(reason: String)
     case contentFiltered(stage: String)
+    case contextTooLong(stage: String)
     case modelUnavailable
 
     public var errorDescription: String? {
@@ -105,6 +106,8 @@ public enum StageError: Error, Sendable, LocalizedError {
             "Memory retrieval failed: \(err.localizedDescription)"
         case .contentFiltered(let stage):
             "[\(stage)] Apple Intelligenceの安全フィルターにより、この入力は処理できませんでした。入力を言い換えるか、より具体的な表現に変更してお試しください。"
+        case .contextTooLong(let stage):
+            "[\(stage)] 入力が長すぎるため処理できませんでした。質問を短くするか、要点を絞ってお試しください。"
         case .pipelineAborted(let reason):
             "Pipeline aborted: \(reason)"
         case .modelUnavailable:

@@ -34,6 +34,8 @@ public func executeWithRetry(
                 switch modelError {
                 case .safetyFilterViolation:
                     throw StageError.contentFiltered(stage: stage.name)
+                case .contextTooLong:
+                    throw StageError.contextTooLong(stage: stage.name)
                 case .modelUnavailable:
                     throw StageError.modelUnavailable
                 default:

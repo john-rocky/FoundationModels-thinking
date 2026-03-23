@@ -26,6 +26,9 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
             if Self.isSafetyFilterError(error) {
                 throw ModelError.safetyFilterViolation
             }
+            if Self.isContextTooLongError(error) {
+                throw ModelError.contextTooLong
+            }
             throw error
         }
     }
@@ -54,6 +57,8 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                 } catch {
                     if Self.isSafetyFilterError(error) {
                         continuation.finish(throwing: ModelError.safetyFilterViolation)
+                    } else if Self.isContextTooLongError(error) {
+                        continuation.finish(throwing: ModelError.contextTooLong)
                     } else {
                         continuation.finish(throwing: error)
                     }
@@ -69,5 +74,17 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
         }
         let localized = error.localizedDescription
         return localized.contains("unsafe") || localized.contains("guardrail")
+    }
+
+    private static func isContextTooLongError(_ error: Error) -> Bool {
+        let desc = String(describing: error)
+        let localized = error.localizedDescription
+        let combined = desc + " " + localized
+        return combined.contains("too long")
+            || combined.contains("too many tokens")
+            || combined.contains("context length")
+            || combined.contains("maximum")
+            || combined.contains("exceeds")
+            || combined.contains("token limit")
     }
 }
