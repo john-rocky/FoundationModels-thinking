@@ -13,6 +13,7 @@ final class ChatViewModel {
     var showTrace = false
     var showMemoryBrowser = false
     var errorMessage: String?
+    private var currentTask: Task<Void, Never>?
 
     var appLanguage: AppLanguage {
         didSet {
@@ -85,7 +86,8 @@ final class ChatViewModel {
 
         isProcessing = true
 
-        Task {
+        currentTask?.cancel()
+        currentTask = Task {
             await processMessage(text: text, conversationId: conversation.id)
         }
     }
@@ -99,6 +101,7 @@ final class ChatViewModel {
             activeBranchNames = []
             currentStreamingStageName = nil
             currentStreamingContent = ""
+            currentTask = nil
         }
 
         do {

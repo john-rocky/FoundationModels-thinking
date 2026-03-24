@@ -43,6 +43,7 @@ struct MessageBubbleView: View {
                     }
                 }
                 .padding(12)
+                .foregroundStyle(message.role == .user ? .white : .primary)
                 .background(backgroundFor(role: message.role))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 

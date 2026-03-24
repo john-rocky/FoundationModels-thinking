@@ -35,7 +35,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
 
     public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
-            Task {
+            let task = Task {
                 guard SystemLanguageModel.default.isAvailable else {
                     continuation.finish(throwing: StageError.modelUnavailable)
                     return
@@ -51,6 +51,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                 do {
                     let stream = session.streamResponse(to: userPrompt)
                     for try await partial in stream {
+                        if Task.isCancelled { break }
                         continuation.yield(partial.content)
                     }
                     continuation.finish()
@@ -63,6 +64,9 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                         continuation.finish(throwing: error)
                     }
                 }
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
             }
         }
     }
