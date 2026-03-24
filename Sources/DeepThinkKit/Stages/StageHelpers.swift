@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Context Size Limits
 
 private let maxContextLength = 1200
-private let maxPreviousOutputLength = 500
+private let maxPreviousOutputLength = 800
 
 // MARK: - Streaming Generate Helper
 

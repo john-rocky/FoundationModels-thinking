@@ -117,8 +117,14 @@ final class ChatViewModel {
             )
 
             let resultTask = Task.detached { () -> PipelineResult in
-                defer { await context.finishEventStream() }
-                return try await pipeline.execute(query: text, context: context)
+                do {
+                    let result = try await pipeline.execute(query: text, context: context)
+                    await context.finishEventStream()
+                    return result
+                } catch {
+                    await context.finishEventStream()
+                    throw error
+                }
             }
 
             // Consume events on MainActor for real-time UI updates

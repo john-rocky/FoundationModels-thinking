@@ -21,10 +21,10 @@ public struct FinalizeStage: Stage {
 
         if context.language.isJapanese {
             systemPrompt = "以下の回答をそのまま最終出力として整形してください。内容の追加・削除・言い換えはしないこと。確信度の数値や内部メモのみ除去し、読みやすく整えるだけにしてください。"
-            userPrompt = "以下を最終形式に整形してください：\n\n\(truncate(bestAnswer, to: 1000))"
+            userPrompt = "以下を最終形式に整形してください：\n\n\(truncate(bestAnswer, to: 2000))"
         } else {
             systemPrompt = "Format the following answer as the final output. Only remove confidence numbers and internal notes, and make it readable. Keep all content unchanged."
-            userPrompt = "Please format the following into its final form:\n\n\(truncate(bestAnswer, to: 1000))"
+            userPrompt = "Please format the following into its final form:\n\n\(truncate(bestAnswer, to: 2000))"
         }
 
         let raw = try await streamingGenerate(
