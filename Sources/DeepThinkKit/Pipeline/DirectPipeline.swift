@@ -33,7 +33,7 @@ public struct DirectPipeline: Pipeline, Sendable {
         let raw: String
         do {
             raw = try await context.modelProvider.generate(
-                systemPrompt: nil,
+                systemPrompt: "Answer the question accurately and clearly.",
                 userPrompt: query
             )
         } catch {
