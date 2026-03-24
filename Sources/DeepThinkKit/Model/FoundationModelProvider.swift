@@ -13,12 +13,23 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
             throw StageError.modelUnavailable
         }
 
-        let session = Self.makeSession(systemPrompt: systemPrompt)
+        let session: LanguageModelSession
+        if let systemPrompt, !systemPrompt.isEmpty {
+            session = LanguageModelSession(instructions: systemPrompt)
+        } else {
+            session = LanguageModelSession()
+        }
         do {
             let response = try await session.respond(to: userPrompt)
             return response.content
         } catch {
-            throw Self.mapError(error)
+            if Self.isSafetyFilterError(error) {
+                throw ModelError.safetyFilterViolation
+            }
+            if Self.isContextTooLongError(error) {
+                throw ModelError.contextTooLong
+            }
+            throw error
         }
     }
 
@@ -30,34 +41,30 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                     return
                 }
 
-                let session = Self.makeSession(systemPrompt: systemPrompt)
+                let session: LanguageModelSession
+                if let systemPrompt, !systemPrompt.isEmpty {
+                    session = LanguageModelSession(instructions: systemPrompt)
+                } else {
+                    session = LanguageModelSession()
+                }
+
                 do {
-                    for try await partial in session.streamResponse(to: userPrompt) {
+                    let stream = session.streamResponse(to: userPrompt)
+                    for try await partial in stream {
                         continuation.yield(partial.content)
                     }
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: Self.mapError(error))
+                    if Self.isSafetyFilterError(error) {
+                        continuation.finish(throwing: ModelError.safetyFilterViolation)
+                    } else if Self.isContextTooLongError(error) {
+                        continuation.finish(throwing: ModelError.contextTooLong)
+                    } else {
+                        continuation.finish(throwing: error)
+                    }
                 }
             }
         }
-    }
-
-    private static func makeSession(systemPrompt: String?) -> LanguageModelSession {
-        if let systemPrompt, !systemPrompt.isEmpty {
-            return LanguageModelSession(instructions: systemPrompt)
-        }
-        return LanguageModelSession()
-    }
-
-    private static func mapError(_ error: Error) -> Error {
-        if isSafetyFilterError(error) {
-            return ModelError.safetyFilterViolation
-        }
-        if isContextTooLongError(error) {
-            return ModelError.contextTooLong
-        }
-        return error
     }
 
     private static func isSafetyFilterError(_ error: Error) -> Bool {
