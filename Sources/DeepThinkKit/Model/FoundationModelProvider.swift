@@ -51,7 +51,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
         if let systemPrompt, !systemPrompt.isEmpty {
             return LanguageModelSession(instructions: systemPrompt)
         }
-        return LanguageModelSession(instructions: "You are a helpful assistant.")
+        return LanguageModelSession()
     }
 
     private static func mapError(_ error: Error) -> Error {
