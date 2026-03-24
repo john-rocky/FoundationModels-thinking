@@ -203,12 +203,8 @@ final class ChatViewModel {
             currentStreamingContent = ""
 
         case .stageStreamingContent(let name, let content):
-            if isFinalAnswerStage(name) {
-                streamingAnswerContent = content
-            } else {
-                currentStreamingStageName = name
-                currentStreamingContent = content
-            }
+            currentStreamingStageName = name
+            currentStreamingContent = content
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
                 thinkingSteps[idx].streamingContent = content
             }
