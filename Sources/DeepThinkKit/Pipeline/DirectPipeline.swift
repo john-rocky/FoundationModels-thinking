@@ -32,9 +32,11 @@ public struct DirectPipeline: Pipeline, Sendable {
 
         let raw: String
         do {
-            raw = try await context.modelProvider.generate(
+            raw = try await streamingGenerate(
+                stageName: "Direct",
                 systemPrompt: "Answer the question accurately and clearly.",
-                userPrompt: query
+                userPrompt: query,
+                context: context
             )
         } catch {
             let stageError: Error
@@ -49,12 +51,7 @@ public struct DirectPipeline: Pipeline, Sendable {
             throw stageError
         }
 
-        let output = StageOutput(
-            stageKind: .solve,
-            content: raw,
-            confidence: 0.5,
-            metadata: ["mode": "direct"]
-        )
+        let output = parseOutput(raw: raw, kind: .solve)
 
         await context.traceCollector.record(
             event: .stageCompleted(stage: "Direct", output: output)
