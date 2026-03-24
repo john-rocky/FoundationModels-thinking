@@ -27,10 +27,8 @@ struct ChatView: View {
                                 .id("thinking")
                         }
 
-                        if !viewModel.streamingAnswerContent.isEmpty {
-                            StreamingAnswerBubble(content: viewModel.streamingAnswerContent)
-                                .id("streaming-answer")
-                        }
+                        StreamingAnswerBubble(content: viewModel.streamingAnswerContent)
+                            .id("streaming-answer")
                     }
                     .padding()
                 }
@@ -51,13 +49,6 @@ struct ChatView: View {
                 .onChange(of: viewModel.currentStreamingContent.count) {
                     if viewModel.isProcessing {
                         proxy.scrollTo("thinking", anchor: .bottom)
-                    }
-                }
-                .onChange(of: viewModel.streamingAnswerContent.isEmpty) {
-                    if !viewModel.streamingAnswerContent.isEmpty {
-                        withAnimation {
-                            proxy.scrollTo("streaming-answer", anchor: .bottom)
-                        }
                     }
                 }
                 .onTapGesture {
@@ -185,16 +176,20 @@ struct StreamingAnswerBubble: View {
     let content: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(content)
-                    .textSelection(.enabled)
-                    .padding(12)
-                    .foregroundStyle(.primary)
-                    .background(AppColors.secondaryBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+        if content.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(content)
+                        .textSelection(.enabled)
+                        .padding(12)
+                        .foregroundStyle(.primary)
+                        .background(AppColors.secondaryBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
 
-                Spacer(minLength: 60)
+                    Spacer(minLength: 60)
+                }
             }
         }
     }
