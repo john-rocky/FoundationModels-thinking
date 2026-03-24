@@ -51,11 +51,9 @@ struct ChatView: View {
                         proxy.scrollTo("thinking", anchor: .bottom)
                     }
                 }
-                .onChange(of: viewModel.streamingAnswerContent.isEmpty) {
+                .onChange(of: viewModel.streamingAnswerContent.count / 50) {
                     if !viewModel.streamingAnswerContent.isEmpty {
-                        withAnimation {
-                            proxy.scrollTo("streaming-answer", anchor: .bottom)
-                        }
+                        proxy.scrollTo("streaming-answer", anchor: .bottom)
                     }
                 }
                 .onTapGesture {
