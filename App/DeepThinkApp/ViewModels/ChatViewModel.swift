@@ -114,11 +114,11 @@ final class ChatViewModel {
                 longTermMemory: longTermMemory
             )
 
-            // Retrieve relevant memories for this query
-            let memoryHits = (try? await longTermMemory.search(
-                query: MemorySearchQuery(text: text, limit: 3)
-            )) ?? []
-            await context.setRetrievedMemory(memoryHits)
+            // Memory retrieval disabled for freeze diagnosis
+            // let memoryHits = (try? await longTermMemory.search(
+            //     query: MemorySearchQuery(text: text, limit: 3)
+            // )) ?? []
+            // await context.setRetrievedMemory(memoryHits)
 
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
@@ -158,16 +158,16 @@ final class ChatViewModel {
                 }
             }
 
-            // Auto-save to long-term memory
-            if result.finalOutput.confidence >= 0.3 {
-                let entry = MemoryEntry(
-                    kind: .summary,
-                    content: result.finalOutput.content,
-                    tags: ["auto-save", selectedPipelineKind.rawValue],
-                    source: "pipeline:\(pipeline.name)"
-                )
-                try? await longTermMemory.save(entry)
-            }
+            // Auto-save disabled for freeze diagnosis
+            // if result.finalOutput.confidence >= 0.3 {
+            //     let entry = MemoryEntry(
+            //         kind: .summary,
+            //         content: result.finalOutput.content,
+            //         tags: ["auto-save", selectedPipelineKind.rawValue],
+            //         source: "pipeline:\(pipeline.name)"
+            //     )
+            //     try? await longTermMemory.save(entry)
+            // }
 
         } catch {
             let description: String
