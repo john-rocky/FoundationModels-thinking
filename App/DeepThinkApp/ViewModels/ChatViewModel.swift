@@ -14,6 +14,12 @@ final class ChatViewModel {
     var showMemoryBrowser = false
     var errorMessage: String?
 
+    var appLanguage: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(appLanguage.rawValue, forKey: "appLanguage")
+        }
+    }
+
     // Streaming thinking state
     var thinkingSteps: [ThinkingStep] = []
     var currentPipelineName: String?
@@ -37,6 +43,12 @@ final class ChatViewModel {
     }
 
     init() {
+        if let saved = UserDefaults.standard.string(forKey: "appLanguage"),
+           let lang = AppLanguage(rawValue: saved) {
+            self.appLanguage = lang
+        } else {
+            self.appLanguage = .japanese
+        }
         createNewConversation()
     }
 
@@ -93,6 +105,7 @@ final class ChatViewModel {
             let modelProvider = FoundationModelProvider()
             let context = PipelineContext(
                 modelProvider: modelProvider,
+                language: appLanguage,
                 longTermMemory: longTermMemory
             )
 

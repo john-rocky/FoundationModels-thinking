@@ -5,7 +5,7 @@ import Foundation
 public struct MergeStage: Stage {
     public let kind: StageKind = .merge
     public let name = "Merge"
-    public let purpose = "複数の解答を統合して一つの回答にまとめる"
+    public let purpose = "Integrate multiple answers into a single unified response"
 
     public init() {}
 
@@ -20,14 +20,16 @@ public struct MergeStage: Stage {
             .map { "[\($0.key)] \(summarizeForNextStage($0.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = "以下の複数回答から、各回答の最も優れた部分を選んで統合してください。共通する内容は確度が高いとみなし、矛盾する部分は最も根拠のある方を採用すること。確信度(0.0-1.0)も末尾に。"
+        let systemPrompt: String
+        let userPrompt: String
 
-        let userPrompt = """
-        質問: \(truncate(input.query, to: 300))
-
-        【各回答】
-        \(solveOutputs)
-        """
+        if context.language.isJapanese {
+            systemPrompt = "以下の複数回答から、各回答の最も優れた部分を選んで統合してください。共通する内容は確度が高いとみなし、矛盾する部分は最も根拠のある方を採用すること。確信度(0.0-1.0)も末尾に。"
+            userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【各回答】\n\(solveOutputs)"
+        } else {
+            systemPrompt = "Select the best parts from each answer and integrate them. Treat common content as high-confidence and adopt the most well-supported side for contradictions. Confidence (0.0-1.0) at the end."
+            userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
+        }
 
         let raw = try await streamingGenerate(
             stageName: name,
@@ -50,7 +52,7 @@ public struct MergeStage: Stage {
 public struct AggregateStage: Stage {
     public let kind: StageKind = .aggregate
     public let name = "Aggregate"
-    public let purpose = "複数回答の共通性・多数性から最終答えを導く"
+    public let purpose = "Derive the final answer from commonality and majority across multiple answers"
 
     public init() {}
 
@@ -66,14 +68,16 @@ public struct AggregateStage: Stage {
             .map { "[\($0.offset + 1)] \(summarizeForNextStage($0.element.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = "以下の複数回答を比較分析してください。多数の回答が一致する内容を最も信頼し、独自の主張は根拠を検証して採否を判断すること。最終回答を出力してください。確信度(0.0-1.0)も末尾に。"
+        let systemPrompt: String
+        let userPrompt: String
 
-        let userPrompt = """
-        質問: \(truncate(input.query, to: 300))
-
-        【各回答】
-        \(solveOutputs)
-        """
+        if context.language.isJapanese {
+            systemPrompt = "以下の複数回答を比較分析してください。多数の回答が一致する内容を最も信頼し、独自の主張は根拠を検証して採否を判断すること。最終回答を出力してください。確信度(0.0-1.0)も末尾に。"
+            userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【各回答】\n\(solveOutputs)"
+        } else {
+            systemPrompt = "Compare and analyze the following answers. Trust content where the majority agrees, verify evidence for unique claims. Output the final answer. Confidence (0.0-1.0) at the end."
+            userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
+        }
 
         let raw = try await streamingGenerate(
             stageName: name,

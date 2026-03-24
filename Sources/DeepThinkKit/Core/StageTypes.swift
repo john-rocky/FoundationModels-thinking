@@ -104,7 +104,7 @@ public enum StageError: Error, Sendable, LocalizedError {
         case .memoryRetrievalFailed(let err):
             "Memory retrieval failed: \(err.localizedDescription)"
         case .contentFiltered(let stage):
-            "[\(stage)] Apple Intelligenceの安全フィルターにより、この入力は処理できませんでした。入力を言い換えるか、より具体的な表現に変更してお試しください。"
+            "[\(stage)] This input was blocked by Apple Intelligence's safety filter. Try rephrasing your input or using more specific wording."
         case .pipelineAborted(let reason):
             "Pipeline aborted: \(reason)"
         case .modelUnavailable:

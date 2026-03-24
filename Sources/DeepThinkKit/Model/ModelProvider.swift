@@ -31,4 +31,9 @@ public enum ModelError: Error, Sendable {
     case contextTooLong
     case rateLimited
     case safetyFilterViolation
+
+    public var isSafetyFilter: Bool {
+        if case .safetyFilterViolation = self { return true }
+        return false
+    }
 }

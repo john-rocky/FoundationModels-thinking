@@ -5,7 +5,7 @@ import Foundation
 
 public struct SequentialPipeline: Pipeline, Sendable {
     public let name = "Sequential"
-    public let description = "Analyze → Plan → Solve → Finalize の直列構成"
+    public let description = "Analyze → Plan → Solve → Finalize sequential pipeline"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] {

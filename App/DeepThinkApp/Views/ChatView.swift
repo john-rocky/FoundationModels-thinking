@@ -67,16 +67,35 @@ struct ChatView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    ForEach(PipelineKind.allCases) { kind in
-                        Button {
-                            viewModel.selectedPipelineKind = kind
-                        } label: {
-                            Label(
-                                kind.displayName,
-                                systemImage: viewModel.selectedPipelineKind == kind
-                                    ? "checkmark.circle.fill"
-                                    : "circle"
-                            )
+                    // Pipeline selector
+                    Section("Pipeline") {
+                        ForEach(PipelineKind.allCases) { kind in
+                            Button {
+                                viewModel.selectedPipelineKind = kind
+                            } label: {
+                                Label(
+                                    kind.displayName,
+                                    systemImage: viewModel.selectedPipelineKind == kind
+                                        ? "checkmark.circle.fill"
+                                        : "circle"
+                                )
+                            }
+                        }
+                    }
+
+                    // Language selector
+                    Section("Language") {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Button {
+                                viewModel.appLanguage = lang
+                            } label: {
+                                Label(
+                                    lang.displayName,
+                                    systemImage: viewModel.appLanguage == lang
+                                        ? "checkmark.circle.fill"
+                                        : "circle"
+                                )
+                            }
                         }
                     }
                 } label: {

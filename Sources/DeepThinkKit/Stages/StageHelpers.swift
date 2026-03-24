@@ -42,8 +42,14 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
 
     let bulletPoints = extractBulletPoints(from: content)
     let confidence = extractConfidence(from: content)
-    let unresolvedIssues = extractSection(from: content, headers: ["未解決事項", "残存課題", "未確定点", "不明点"])
-    let assumptions = extractSection(from: content, headers: ["前提条件", "前提"])
+    let unresolvedIssues = extractSection(from: content, headers: [
+        "未解決事項", "残存課題", "未確定点", "不明点",
+        "Unresolved Issues", "Open Issues", "Remaining Issues", "Unknowns"
+    ])
+    let assumptions = extractSection(from: content, headers: [
+        "前提条件", "前提",
+        "Assumptions", "Prerequisites"
+    ])
 
     return StageOutput(
         stageKind: kind,
@@ -55,12 +61,13 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
     )
 }
 
-func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
+func formatMemoryContext(_ entries: [MemoryEntry], language: AppLanguage = .japanese) -> String {
     guard !entries.isEmpty else { return "" }
     let formatted = entries.prefix(3).map { entry in
         "- [\(entry.kind.rawValue)] \(truncate(entry.content, to: 100))"
     }.joined(separator: "\n")
-    return "\n\n【参考メモリー】\n\(formatted)"
+    let header = language.isJapanese ? "【参考メモリー】" : "[Reference Memory]"
+    return "\n\n\(header)\n\(formatted)"
 }
 
 /// Truncate text to a maximum character count, preserving word boundaries

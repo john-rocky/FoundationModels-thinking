@@ -8,17 +8,20 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
 
     public init() {}
 
+    private func makeSession(instructions: String?) -> LanguageModelSession {
+        let model = SystemLanguageModel(guardrails: .permissiveContentTransformations)
+        if let instructions, !instructions.isEmpty {
+            return LanguageModelSession(model: model, instructions: instructions)
+        }
+        return LanguageModelSession(model: model)
+    }
+
     public func generate(systemPrompt: String?, userPrompt: String) async throws -> String {
         guard SystemLanguageModel.default.isAvailable else {
             throw StageError.modelUnavailable
         }
 
-        let session: LanguageModelSession
-        if let systemPrompt, !systemPrompt.isEmpty {
-            session = LanguageModelSession(instructions: systemPrompt)
-        } else {
-            session = LanguageModelSession()
-        }
+        let session = makeSession(instructions: systemPrompt)
         do {
             let response = try await session.respond(to: userPrompt)
             return response.content
@@ -38,12 +41,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                     return
                 }
 
-                let session: LanguageModelSession
-                if let systemPrompt, !systemPrompt.isEmpty {
-                    session = LanguageModelSession(instructions: systemPrompt)
-                } else {
-                    session = LanguageModelSession()
-                }
+                let session = self.makeSession(instructions: systemPrompt)
 
                 do {
                     let stream = session.streamResponse(to: userPrompt)

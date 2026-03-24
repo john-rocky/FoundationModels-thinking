@@ -5,7 +5,7 @@ import Foundation
 public struct RetrieveMemoryStage: Stage {
     public let kind: StageKind = .retrieveMemory
     public let name = "RetrieveMemory"
-    public let purpose = "外部メモリーから関連情報を取得する"
+    public let purpose = "Retrieve relevant information from external memory"
 
     private let searchPolicy: MemorySearchPolicy
 
@@ -38,7 +38,9 @@ public struct RetrieveMemoryStage: Stage {
 
         let content: String
         if entries.isEmpty {
-            content = "関連するメモリーは見つかりませんでした。"
+            content = context.language.isJapanese
+                ? "関連するメモリーは見つかりませんでした。"
+                : "No relevant memory found."
         } else {
             content = entries.enumerated().map { idx, entry in
                 "[\(idx + 1)] [\(entry.kind.rawValue)] \(entry.content)"

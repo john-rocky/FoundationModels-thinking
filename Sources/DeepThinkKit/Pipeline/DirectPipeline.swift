@@ -5,7 +5,7 @@ import Foundation
 
 public struct DirectPipeline: Pipeline, Sendable {
     public let name = "Direct"
-    public let description = "Query -> Response (単一推論、パイプラインなし)"
+    public let description = "Query -> Response (single inference, no pipeline)"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] { [] }
@@ -33,7 +33,7 @@ public struct DirectPipeline: Pipeline, Sendable {
         let raw: String
         do {
             raw = try await context.modelProvider.generate(
-                systemPrompt: "質問に対して正確で分かりやすい回答を生成してください。",
+                systemPrompt: nil,
                 userPrompt: query
             )
         } catch {

@@ -5,7 +5,7 @@ import Foundation
 public struct ReviseStage: Stage {
     public let kind: StageKind = .revise
     public let name = "Revise"
-    public let purpose = "critique 結果をもとに回答を修正する"
+    public let purpose = "Revise the answer based on critique results"
 
     public init() {}
 
@@ -20,17 +20,16 @@ public struct ReviseStage: Stage {
 
         let critiqueContent = input.previousOutputs["Critique"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = "批評で指摘された各問題点を一つずつ修正し、改善後の完全な回答を出力してください。批評にない部分は元の回答を維持すること。何を修正したか末尾に簡潔に記載。確信度(0.0-1.0)も末尾に。"
+        let systemPrompt: String
+        let userPrompt: String
 
-        let userPrompt = """
-        質問: \(truncate(input.query, to: 300))
-
-        【現在の回答】
-        \(solveContent)
-
-        【批評・改善指示】
-        \(critiqueContent)
-        """
+        if context.language.isJapanese {
+            systemPrompt = "批評で指摘された各問題点を一つずつ修正し、改善後の完全な回答を出力してください。批評にない部分は元の回答を維持すること。何を修正したか末尾に簡潔に記載。確信度(0.0-1.0)も末尾に。"
+            userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【現在の回答】\n\(solveContent)\n\n【批評・改善指示】\n\(critiqueContent)"
+        } else {
+            systemPrompt = "Fix each issue raised in the critique one by one and output the complete improved answer. Keep parts not mentioned in the critique unchanged. Briefly list what you fixed at the end. Confidence (0.0-1.0) at the end."
+            userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Current Answer]\n\(solveContent)\n\n[Critique]\n\(critiqueContent)"
+        }
 
         let raw = try await streamingGenerate(
             stageName: name,
