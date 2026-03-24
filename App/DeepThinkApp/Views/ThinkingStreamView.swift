@@ -67,13 +67,20 @@ struct ThinkingStreamView: View {
                         }
 
                         if !viewModel.currentStreamingContent.isEmpty {
-                            Text(viewModel.currentStreamingContent)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(8)
-                                .textSelection(.enabled)
-                                .contentTransition(.numericText())
-                                .animation(.easeOut(duration: 0.05), value: viewModel.currentStreamingContent.count)
+                            ScrollViewReader { proxy in
+                                ScrollView(.vertical) {
+                                    Text(viewModel.currentStreamingContent)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id("streamingBottom")
+                                }
+                                .frame(maxHeight: 200)
+                                .onChange(of: viewModel.currentStreamingContent) {
+                                    proxy.scrollTo("streamingBottom", anchor: .bottom)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 16)

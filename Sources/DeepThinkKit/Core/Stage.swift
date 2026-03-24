@@ -25,9 +25,6 @@ public func executeWithRetry(
     context: PipelineContext
 ) async throws -> StageOutput {
     var lastError: Error?
-    var safetyFilterCount = 0
-    let maxSafetyRetries = 2
-
     for attempt in 1...max(1, stage.maxRetries) {
         do {
             let output = try await stage.execute(input: input, context: context)
@@ -36,16 +33,9 @@ public func executeWithRetry(
             if let modelError = error as? ModelError {
                 switch modelError {
                 case .safetyFilterViolation:
-                    safetyFilterCount += 1
-                    if safetyFilterCount >= maxSafetyRetries {
-                        throw StageError.contentFiltered(stage: stage.name)
-                    }
-                    await context.traceCollector.record(
-                        event: .retry(stage: stage.name, attempt: attempt, error: error)
-                    )
-                    await context.emit(.stageRetrying(stageName: stage.name, attempt: attempt))
-                    try await Task.sleep(for: .milliseconds(300 * safetyFilterCount))
-                    continue
+                    throw StageError.contentFiltered(stage: stage.name)
+                case .contextTooLong:
+                    throw StageError.contextTooLong(stage: stage.name)
                 case .modelUnavailable:
                     throw StageError.modelUnavailable
                 default:

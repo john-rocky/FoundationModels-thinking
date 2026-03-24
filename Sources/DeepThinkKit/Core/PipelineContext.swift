@@ -69,6 +69,7 @@ public actor PipelineContext {
     }
 
     public func emit(_ event: PipelineEvent) {
+        PipelineLogger.log(event)
         eventContinuation?.yield(event)
     }
 
