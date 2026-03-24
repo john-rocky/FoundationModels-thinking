@@ -15,30 +15,48 @@ public struct FinalizeStage: Stage {
         )
 
         let bestAnswer = findBestAnswer(from: input.previousOutputs)
+        let cleaned = cleanForPresentation(bestAnswer)
 
-        let systemPrompt: String
-        let userPrompt: String
+        // Emit streaming content so the UI shows progress
+        await context.emit(.stageStreamingContent(stageName: name, content: cleaned))
 
-        if context.language.isJapanese {
-            systemPrompt = "以下の回答をそのまま最終出力として整形してください。内容の追加・削除・言い換えはしないこと。確信度の数値や内部メモのみ除去し、読みやすく整えるだけにしてください。"
-            userPrompt = "以下を最終形式に整形してください：\n\n\(truncate(bestAnswer, to: 2000))"
-        } else {
-            systemPrompt = "Format the following answer as the final output. Only remove confidence numbers and internal notes, and make it readable. Keep all content unchanged."
-            userPrompt = "Please format the following into its final form:\n\n\(truncate(bestAnswer, to: 2000))"
-        }
-
-        let raw = try await streamingGenerate(
-            stageName: name,
-            systemPrompt: systemPrompt,
-            userPrompt: userPrompt,
-            context: context
+        let output = StageOutput(
+            stageKind: .finalize,
+            content: cleaned,
+            confidence: input.previousOutputs.values
+                .sorted { $0.timestamp > $1.timestamp }
+                .first?.confidence ?? 0.5
         )
-
-        let output = parseOutput(raw: raw, kind: .finalize)
 
         await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
 
         return output
+    }
+
+    /// Remove confidence scores, internal notes, and trailing metadata without using the model.
+    private func cleanForPresentation(_ text: String) -> String {
+        let lines = text.components(separatedBy: "\n")
+        var result: [String] = []
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces).lowercased()
+            // Skip confidence lines
+            if trimmed.hasPrefix("confidence:") || trimmed.hasPrefix("確信度") {
+                continue
+            }
+            if trimmed.hasPrefix("- confidence:") || trimmed.hasPrefix("- 確信度") {
+                continue
+            }
+            // Skip internal note markers
+            if trimmed.hasPrefix("what was fixed") || trimmed.hasPrefix("修正箇所") {
+                break
+            }
+            result.append(line)
+        }
+        // Remove trailing blank lines
+        while result.last?.trimmingCharacters(in: .whitespaces).isEmpty == true {
+            result.removeLast()
+        }
+        return result.joined(separator: "\n")
     }
 
     private func findBestAnswer(from outputs: [String: StageOutput]) -> String {
