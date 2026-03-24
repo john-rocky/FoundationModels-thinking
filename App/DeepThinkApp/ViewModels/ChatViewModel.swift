@@ -28,6 +28,7 @@ final class ChatViewModel {
     var activeBranchNames: [String] = []
     var currentStreamingStageName: String?
     var currentStreamingContent: String = ""
+    var streamingAnswerContent: String = ""
 
     private let longTermMemory = LongTermMemory()
 
@@ -101,6 +102,7 @@ final class ChatViewModel {
             activeBranchNames = []
             currentStreamingStageName = nil
             currentStreamingContent = ""
+            streamingAnswerContent = ""
             currentTask = nil
         }
 
@@ -201,8 +203,12 @@ final class ChatViewModel {
             currentStreamingContent = ""
 
         case .stageStreamingContent(let name, let content):
-            currentStreamingStageName = name
-            currentStreamingContent = content
+            if isFinalAnswerStage(name) {
+                streamingAnswerContent = content
+            } else {
+                currentStreamingStageName = name
+                currentStreamingContent = content
+            }
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
                 thinkingSteps[idx].streamingContent = content
             }
@@ -260,5 +266,9 @@ final class ChatViewModel {
         case .pipelineCompleted, .pipelineFailed:
             break
         }
+    }
+
+    private func isFinalAnswerStage(_ name: String) -> Bool {
+        name == "Finalize" || name == "Direct"
     }
 }
