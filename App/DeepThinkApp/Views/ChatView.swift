@@ -51,6 +51,11 @@ struct ChatView: View {
                         proxy.scrollTo("thinking", anchor: .bottom)
                     }
                 }
+                .onChange(of: viewModel.streamingAnswerContent.count) {
+                    if !viewModel.streamingAnswerContent.isEmpty {
+                        proxy.scrollTo("streaming-answer", anchor: .bottom)
+                    }
+                }
                 .onTapGesture {
                     #if os(iOS)
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
