@@ -13,12 +13,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
             throw StageError.modelUnavailable
         }
 
-        let session: LanguageModelSession
-        if let systemPrompt, !systemPrompt.isEmpty {
-            session = LanguageModelSession(instructions: systemPrompt)
-        } else {
-            session = LanguageModelSession()
-        }
+        let session = LanguageModelSession()
         do {
             let response = try await session.respond(to: userPrompt)
             return response.content
@@ -41,12 +36,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                     return
                 }
 
-                let session: LanguageModelSession
-                if let systemPrompt, !systemPrompt.isEmpty {
-                    session = LanguageModelSession(instructions: systemPrompt)
-                } else {
-                    session = LanguageModelSession()
-                }
+                let session = LanguageModelSession()
 
                 do {
                     let stream = session.streamResponse(to: userPrompt)
