@@ -147,8 +147,8 @@ final class ChatViewModel {
                 }
             }
 
-            // Auto-save to long-term memory if confidence is high
-            if result.finalOutput.confidence >= 0.7 {
+            // Auto-save to long-term memory
+            if result.finalOutput.confidence >= 0.3 {
                 let entry = MemoryEntry(
                     kind: .summary,
                     content: result.finalOutput.content,
