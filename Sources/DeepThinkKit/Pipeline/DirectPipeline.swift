@@ -32,10 +32,15 @@ public struct DirectPipeline: Pipeline, Sendable {
 
         let raw: String
         do {
+            let memory = await context.getRetrievedMemory()
+            var userPrompt = query
+            if !memory.isEmpty {
+                userPrompt += formatMemoryContext(memory, language: context.language)
+            }
             raw = try await streamingGenerate(
                 stageName: "Direct",
                 systemPrompt: "Answer the question accurately and clearly.",
-                userPrompt: query,
+                userPrompt: userPrompt,
                 context: context
             )
         } catch {

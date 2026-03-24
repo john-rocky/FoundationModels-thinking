@@ -30,6 +30,7 @@ public actor PipelineContext {
     public nonisolated let language: AppLanguage
 
     private var stageOutputs: [String: StageOutput] = [:]
+    private var retrievedMemory: [MemoryEntry] = []
     private var eventContinuation: AsyncStream<PipelineEvent>.Continuation?
 
     public init(
@@ -62,6 +63,14 @@ public actor PipelineContext {
         stageOutputs
     }
 
+    public func setRetrievedMemory(_ entries: [MemoryEntry]) {
+        retrievedMemory = entries
+    }
+
+    public func getRetrievedMemory() -> [MemoryEntry] {
+        retrievedMemory
+    }
+
     // MARK: - Event Streaming
 
     public func setEventContinuation(_ continuation: AsyncStream<PipelineEvent>.Continuation) {
@@ -80,11 +89,11 @@ public actor PipelineContext {
 
     // MARK: - Input Building
 
-    public func buildInput(query: String, memoryContext: [MemoryEntry] = []) -> StageInput {
+    public func buildInput(query: String, memoryContext: [MemoryEntry]? = nil) -> StageInput {
         StageInput(
             query: query,
             previousOutputs: stageOutputs,
-            memoryContext: memoryContext,
+            memoryContext: memoryContext ?? retrievedMemory,
             metadata: ["executionId": executionId]
         )
     }

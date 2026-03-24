@@ -109,6 +109,12 @@ final class ChatViewModel {
                 longTermMemory: longTermMemory
             )
 
+            // Retrieve relevant memories for this query
+            let memoryHits = (try? await longTermMemory.search(
+                query: MemorySearchQuery(text: text, limit: 3)
+            )) ?? []
+            await context.setRetrievedMemory(memoryHits)
+
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
