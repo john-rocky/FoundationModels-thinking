@@ -22,7 +22,7 @@ public struct FinalizeStage: Stage {
         let userPrompt = """
         以下を最終形式に整形してください：
 
-        \(truncate(bestAnswer, to: 1000))
+        \(truncate(bestAnswer, to: 2000))
         """
 
         let raw = try await streamingGenerate(

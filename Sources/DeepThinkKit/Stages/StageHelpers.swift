@@ -16,14 +16,22 @@ func streamingGenerate(
     context: PipelineContext
 ) async throws -> String {
     var finalContent = ""
+    var chunkCount = 0
     let stream = context.modelProvider.generateStream(
         systemPrompt: systemPrompt,
         userPrompt: userPrompt
     )
     for try await partial in stream {
+        chunkCount += 1
+        #if DEBUG
+        print("[StreamDebug] \(stageName) chunk \(chunkCount): len=\(partial.count)")
+        #endif
         finalContent = partial
         await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
     }
+    #if DEBUG
+    print("[StreamDebug] \(stageName) final: len=\(finalContent.count), chunks=\(chunkCount)")
+    #endif
     return finalContent
 }
 

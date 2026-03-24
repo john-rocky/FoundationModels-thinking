@@ -1,0 +1,551 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0549CA4496377B52AAE8E07D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DB201CEDF9706F17DD0AFD5B /* Assets.xcassets */; };
+		082F7D184A1DCB2E1666679E /* ThinkingStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DAA3D0DAC9D504094B960E7 /* ThinkingStreamView.swift */; };
+		11004078AD5567FCCB2688DB /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F306C37FC01CA33A2445F8 /* ChatView.swift */; };
+		13C6DE6F01B18F3036202DD9 /* TraceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D2A4BEB799BD8869C45A49 /* TraceDetailView.swift */; };
+		1DDFA6BDD470DE11D502B595 /* ThinkingStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DAA3D0DAC9D504094B960E7 /* ThinkingStreamView.swift */; };
+		1F7A75E0EFC3BAFAC44EB976 /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */; };
+		233F014207DCAE8CE69BD4CB /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3830F8830D3C0AA2985F635 /* InputBarView.swift */; };
+		2611D9E76F8E8D52F45E29E2 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */; };
+		3127BD4DD23086CFA305D495 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F306C37FC01CA33A2445F8 /* ChatView.swift */; };
+		43730B369423F096036C170E /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E23320083B638DBB522C9F /* ChatViewModel.swift */; };
+		46B0882EA3FE8B8E5B6C4192 /* DeepThinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 333D2BAF66169275BD50AA0F /* DeepThinkKit */; };
+		4A34337B557ABD118DF16B7A /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8524592772958CE38A8AA70C /* Conversation.swift */; };
+		4BC4E3345DA37B3590E163DE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3A95482E18033F73AE2735 /* ContentView.swift */; };
+		53353EFCFE18BE9D86F866DA /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E23320083B638DBB522C9F /* ChatViewModel.swift */; };
+		7CFD1941D174183F3D26641B /* DeepThinkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040BA7563AFCD7BA8E7DC854 /* DeepThinkApp.swift */; };
+		97D187224ACA84EF8C70DBE1 /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */; };
+		A6136DD6670C23E721A79DCF /* InputBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3830F8830D3C0AA2985F635 /* InputBarView.swift */; };
+		B713A5601E80B62AAADBE2AB /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8524592772958CE38A8AA70C /* Conversation.swift */; };
+		B72599AA81CDCD4DA354EB58 /* PlatformHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3E524810566665DF42F75 /* PlatformHelpers.swift */; };
+		BC9A705AB1207A3921944296 /* TraceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D2A4BEB799BD8869C45A49 /* TraceDetailView.swift */; };
+		BEA551581E49537E412BC99C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3A95482E18033F73AE2735 /* ContentView.swift */; };
+		CB7725457C4D24FEC017E70F /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5435C1394ED4198FA1DF123 /* ComparisonView.swift */; };
+		CB914A9F45EA8E71C360248D /* DeepThinkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040BA7563AFCD7BA8E7DC854 /* DeepThinkApp.swift */; };
+		D3ECFCF76A4D0B51DDC7EDCA /* PlatformHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3E524810566665DF42F75 /* PlatformHelpers.swift */; };
+		DDB28EDC929664FC693E27F0 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */; };
+		ED590B50292E3D3C6A07B591 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5435C1394ED4198FA1DF123 /* ComparisonView.swift */; };
+		EF5C20798FDA2351E7609318 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DB201CEDF9706F17DD0AFD5B /* Assets.xcassets */; };
+		FB9289540C51D30644686050 /* DeepThinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1CD66ED5BF7BCB376993A26 /* DeepThinkKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		040BA7563AFCD7BA8E7DC854 /* DeepThinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepThinkApp.swift; sourceTree = "<group>"; };
+		0B3A95482E18033F73AE2735 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		12DAA144A99CA93794B24F0C /* DeepThink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeepThink.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		18F306C37FC01CA33A2445F8 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		23FDEFDD2B4FD5597FC19EA0 /* DeepThinkApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = DeepThinkApp.app; path = DeepThink.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2DAA3D0DAC9D504094B960E7 /* ThinkingStreamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingStreamView.swift; sourceTree = "<group>"; };
+		7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
+		8524592772958CE38A8AA70C /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
+		8B092D838C4C62EF7D2D7F31 /* FoundationModels-thinking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "FoundationModels-thinking"; path = .; sourceTree = SOURCE_ROOT; };
+		93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
+		A0D2A4BEB799BD8869C45A49 /* TraceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceDetailView.swift; sourceTree = "<group>"; };
+		A7E23320083B638DBB522C9F /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		B3830F8830D3C0AA2985F635 /* InputBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputBarView.swift; sourceTree = "<group>"; };
+		D0F3E524810566665DF42F75 /* PlatformHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformHelpers.swift; sourceTree = "<group>"; };
+		DB201CEDF9706F17DD0AFD5B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E5435C1394ED4198FA1DF123 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1502243AE2FCD87185A90381 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46B0882EA3FE8B8E5B6C4192 /* DeepThinkKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17F84D631769F7137732F192 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB9289540C51D30644686050 /* DeepThinkKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3BAB90C861DC8E7DCBB17D0B /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				18F306C37FC01CA33A2445F8 /* ChatView.swift */,
+				E5435C1394ED4198FA1DF123 /* ComparisonView.swift */,
+				0B3A95482E18033F73AE2735 /* ContentView.swift */,
+				B3830F8830D3C0AA2985F635 /* InputBarView.swift */,
+				7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */,
+				93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */,
+				D0F3E524810566665DF42F75 /* PlatformHelpers.swift */,
+				2DAA3D0DAC9D504094B960E7 /* ThinkingStreamView.swift */,
+				A0D2A4BEB799BD8869C45A49 /* TraceDetailView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3E1880C8C09960AAB2696255 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				12DAA144A99CA93794B24F0C /* DeepThink.app */,
+				23FDEFDD2B4FD5597FC19EA0 /* DeepThinkApp.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6241868F6CE71ADADE6918B5 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				8B092D838C4C62EF7D2D7F31 /* FoundationModels-thinking */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		CDCBE5BC0BEF426CA39FCB7E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				8524592772958CE38A8AA70C /* Conversation.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D3BCFB063CDF30518D2385D0 /* DeepThinkApp */ = {
+			isa = PBXGroup;
+			children = (
+				DB201CEDF9706F17DD0AFD5B /* Assets.xcassets */,
+				040BA7563AFCD7BA8E7DC854 /* DeepThinkApp.swift */,
+				CDCBE5BC0BEF426CA39FCB7E /* Models */,
+				FF4F7422180825ABA3E8FF11 /* ViewModels */,
+				3BAB90C861DC8E7DCBB17D0B /* Views */,
+			);
+			name = DeepThinkApp;
+			path = App/DeepThinkApp;
+			sourceTree = "<group>";
+		};
+		F555A87F9E6D0EF08599145C = {
+			isa = PBXGroup;
+			children = (
+				D3BCFB063CDF30518D2385D0 /* DeepThinkApp */,
+				6241868F6CE71ADADE6918B5 /* Packages */,
+				3E1880C8C09960AAB2696255 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FF4F7422180825ABA3E8FF11 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A7E23320083B638DBB522C9F /* ChatViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5D78F04DEF5DF5EDAF1688C2 /* DeepThinkApp_macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 128A2CA8CFCBB8C4DCC3E93D /* Build configuration list for PBXNativeTarget "DeepThinkApp_macOS" */;
+			buildPhases = (
+				2F9A5A0095663E9FE1FC4EBC /* Sources */,
+				A9AAB4C127A7A61DD7926618 /* Resources */,
+				1502243AE2FCD87185A90381 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeepThinkApp_macOS;
+			packageProductDependencies = (
+				333D2BAF66169275BD50AA0F /* DeepThinkKit */,
+			);
+			productName = DeepThinkApp_macOS;
+			productReference = 23FDEFDD2B4FD5597FC19EA0 /* DeepThinkApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E22362C5AA08BB57F85F0362 /* DeepThinkApp_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 246720EE2B7DB1E5F60CB8B3 /* Build configuration list for PBXNativeTarget "DeepThinkApp_iOS" */;
+			buildPhases = (
+				4659C05167F5493CB3ADFA52 /* Sources */,
+				0175EF00DB8FDD421E717B9F /* Resources */,
+				17F84D631769F7137732F192 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeepThinkApp_iOS;
+			packageProductDependencies = (
+				A1CD66ED5BF7BCB376993A26 /* DeepThinkKit */,
+			);
+			productName = DeepThinkApp_iOS;
+			productReference = 12DAA144A99CA93794B24F0C /* DeepThink.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5B2D2C077D5E9EA04DEA62C3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = E5C44704949D8D84963DFE19 /* Build configuration list for PBXProject "DeepThinkApp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F555A87F9E6D0EF08599145C;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EAD3A308D50A65BE2F0F089C /* XCLocalSwiftPackageReference "." */,
+			);
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E22362C5AA08BB57F85F0362 /* DeepThinkApp_iOS */,
+				5D78F04DEF5DF5EDAF1688C2 /* DeepThinkApp_macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0175EF00DB8FDD421E717B9F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF5C20798FDA2351E7609318 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A9AAB4C127A7A61DD7926618 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0549CA4496377B52AAE8E07D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2F9A5A0095663E9FE1FC4EBC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				11004078AD5567FCCB2688DB /* ChatView.swift in Sources */,
+				43730B369423F096036C170E /* ChatViewModel.swift in Sources */,
+				ED590B50292E3D3C6A07B591 /* ComparisonView.swift in Sources */,
+				4BC4E3345DA37B3590E163DE /* ContentView.swift in Sources */,
+				4A34337B557ABD118DF16B7A /* Conversation.swift in Sources */,
+				CB914A9F45EA8E71C360248D /* DeepThinkApp.swift in Sources */,
+				233F014207DCAE8CE69BD4CB /* InputBarView.swift in Sources */,
+				97D187224ACA84EF8C70DBE1 /* MemoryBrowserView.swift in Sources */,
+				2611D9E76F8E8D52F45E29E2 /* MessageBubbleView.swift in Sources */,
+				B72599AA81CDCD4DA354EB58 /* PlatformHelpers.swift in Sources */,
+				082F7D184A1DCB2E1666679E /* ThinkingStreamView.swift in Sources */,
+				BC9A705AB1207A3921944296 /* TraceDetailView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4659C05167F5493CB3ADFA52 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3127BD4DD23086CFA305D495 /* ChatView.swift in Sources */,
+				53353EFCFE18BE9D86F866DA /* ChatViewModel.swift in Sources */,
+				CB7725457C4D24FEC017E70F /* ComparisonView.swift in Sources */,
+				BEA551581E49537E412BC99C /* ContentView.swift in Sources */,
+				B713A5601E80B62AAADBE2AB /* Conversation.swift in Sources */,
+				7CFD1941D174183F3D26641B /* DeepThinkApp.swift in Sources */,
+				A6136DD6670C23E721A79DCF /* InputBarView.swift in Sources */,
+				1F7A75E0EFC3BAFAC44EB976 /* MemoryBrowserView.swift in Sources */,
+				DDB28EDC929664FC693E27F0 /* MessageBubbleView.swift in Sources */,
+				D3ECFCF76A4D0B51DDC7EDCA /* PlatformHelpers.swift in Sources */,
+				1DDFA6BDD470DE11D502B595 /* ThinkingStreamView.swift in Sources */,
+				13C6DE6F01B18F3036202DD9 /* TraceDetailView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3F385294C9484F09CEF1692D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DeepThink;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.deepthinkkit.app;
+				PRODUCT_NAME = DeepThink;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		638477A5FE1AF5996A17BC46 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MFN25KNUGJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DeepThink;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.deepthinkkit.app;
+				PRODUCT_NAME = DeepThink;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6E912D6C442A1D72903B99C9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MFN25KNUGJ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DeepThink;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.deepthinkkit.app;
+				PRODUCT_NAME = DeepThink;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		852CAE87542203C078A86CE2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DeepThink;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.deepthinkkit.app;
+				PRODUCT_NAME = DeepThink;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		9D76B74097FFD767FA1CF90A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		EFD4FBF3966278B586DD3D8D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		128A2CA8CFCBB8C4DCC3E93D /* Build configuration list for PBXNativeTarget "DeepThinkApp_macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				852CAE87542203C078A86CE2 /* Debug */,
+				3F385294C9484F09CEF1692D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		246720EE2B7DB1E5F60CB8B3 /* Build configuration list for PBXNativeTarget "DeepThinkApp_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E912D6C442A1D72903B99C9 /* Debug */,
+				638477A5FE1AF5996A17BC46 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E5C44704949D8D84963DFE19 /* Build configuration list for PBXProject "DeepThinkApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9D76B74097FFD767FA1CF90A /* Debug */,
+				EFD4FBF3966278B586DD3D8D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EAD3A308D50A65BE2F0F089C /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		333D2BAF66169275BD50AA0F /* DeepThinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DeepThinkKit;
+		};
+		A1CD66ED5BF7BCB376993A26 /* DeepThinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DeepThinkKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 5B2D2C077D5E9EA04DEA62C3 /* Project object */;
+}
