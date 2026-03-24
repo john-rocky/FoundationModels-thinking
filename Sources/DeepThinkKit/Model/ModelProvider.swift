@@ -36,4 +36,9 @@ public enum ModelError: Error, Sendable {
         if case .safetyFilterViolation = self { return true }
         return false
     }
+
+    public var isContextTooLong: Bool {
+        if case .contextTooLong = self { return true }
+        return false
+    }
 }

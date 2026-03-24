@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Context Size Limits
 
-private let maxContextLength = 800
-private let maxPreviousOutputLength = 400
+private let maxContextLength = 1200
+private let maxPreviousOutputLength = 800
 
 // MARK: - Streaming Generate Helper
 
@@ -55,8 +55,8 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
 
 func formatMemoryContext(_ entries: [MemoryEntry], language: AppLanguage = .japanese) -> String {
     guard !entries.isEmpty else { return "" }
-    let formatted = entries.prefix(3).map { entry in
-        "- [\(entry.kind.rawValue)] \(truncate(entry.content, to: 200))"
+    let formatted = entries.prefix(2).map { entry in
+        "- [\(entry.kind.rawValue)] \(truncate(entry.content, to: 100))"
     }.joined(separator: "\n")
     let header = language.isJapanese ? "【参考メモリー】" : "[Reference Memory]"
     return "\n\n\(header)\n\(formatted)"

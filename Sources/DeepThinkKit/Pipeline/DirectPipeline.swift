@@ -37,16 +37,28 @@ public struct DirectPipeline: Pipeline, Sendable {
             if !memory.isEmpty {
                 userPrompt += formatMemoryContext(memory, language: context.language)
             }
-            raw = try await streamingGenerate(
-                stageName: "Direct",
-                systemPrompt: "Answer the question accurately and clearly.",
-                userPrompt: userPrompt,
-                context: context
-            )
+            do {
+                raw = try await streamingGenerate(
+                    stageName: "Direct",
+                    systemPrompt: "Answer the question accurately and clearly.",
+                    userPrompt: userPrompt,
+                    context: context
+                )
+            } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
+                // Retry without memory context
+                raw = try await streamingGenerate(
+                    stageName: "Direct",
+                    systemPrompt: "Answer the question accurately and clearly.",
+                    userPrompt: query,
+                    context: context
+                )
+            }
         } catch {
             let stageError: Error
             if case ModelError.safetyFilterViolation = error {
                 stageError = StageError.contentFiltered(stage: "Direct")
+            } else if case ModelError.contextTooLong = error {
+                stageError = StageError.contextTooLong(stage: "Direct")
             } else {
                 stageError = error
             }

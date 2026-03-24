@@ -25,9 +25,11 @@ public func executeWithRetry(
     context: PipelineContext
 ) async throws -> StageOutput {
     var lastError: Error?
+    var currentInput = input
+
     for attempt in 1...max(1, stage.maxRetries) {
         do {
-            let output = try await stage.execute(input: input, context: context)
+            let output = try await stage.execute(input: currentInput, context: context)
             return output
         } catch {
             if let modelError = error as? ModelError {
@@ -35,6 +37,20 @@ public func executeWithRetry(
                 case .safetyFilterViolation:
                     throw StageError.contentFiltered(stage: stage.name)
                 case .contextTooLong:
+                    // Retry without memory context to shorten the prompt
+                    if !currentInput.memoryContext.isEmpty {
+                        currentInput = StageInput(
+                            query: currentInput.query,
+                            previousOutputs: currentInput.previousOutputs,
+                            memoryContext: [],
+                            metadata: currentInput.metadata
+                        )
+                        await context.traceCollector.record(
+                            event: .retry(stage: stage.name, attempt: attempt, error: error)
+                        )
+                        await context.emit(.stageRetrying(stageName: stage.name, attempt: attempt))
+                        continue
+                    }
                     throw StageError.contextTooLong(stage: stage.name)
                 case .modelUnavailable:
                     throw StageError.modelUnavailable

@@ -21,7 +21,7 @@ public struct AnalyzeStage: Stage {
             systemPrompt = "You are an expert problem analyst. Decompose the question and output the following as bullet points: (1) Core question (2) Required knowledge domains (3) Hidden assumptions or constraints (4) Ambiguous points. DO NOT write the answer. Include confidence (0.0-1.0) at the end."
         }
 
-        var userPrompt = truncate(input.query, to: 600)
+        var userPrompt = truncate(input.query, to: 1000)
         if !input.memoryContext.isEmpty {
             userPrompt += formatMemoryContext(input.memoryContext, language: context.language)
         }
