@@ -48,6 +48,9 @@ public enum PipelineEvent: Sendable {
 
     /// Web search skipped (LLM decided it's not needed)
     case webSearchSkipped(reason: String)
+
+    /// Model used fallback path (instructions embedded in prompt instead of instructions: parameter)
+    case modelFallbackUsed(stageName: String)
 }
 
 public typealias PipelineEventStream = AsyncStream<PipelineEvent>

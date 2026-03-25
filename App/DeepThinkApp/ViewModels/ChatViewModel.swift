@@ -221,11 +221,27 @@ final class ChatViewModel {
                 thinkingSteps[idx].streamingContent = content
             }
 
-        case .stageCompleted(let name, _, let output, _):
+        case .stageCompleted(let name, let kind, let output, _):
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name && $0.output == nil }) {
                 thinkingSteps[idx].status = .completed
                 thinkingSteps[idx].output = output
                 thinkingSteps[idx].streamingContent = ""
+                // Show search result status in step name
+                if kind == .webSearch, let decision = output.metadata["searchDecision"] {
+                    switch decision {
+                    case "searched":
+                        let count = output.metadata["resultCount"] ?? "0"
+                        thinkingSteps[idx] = ThinkingStep(stageName: "Web Search (\(count) results)", stageKind: .webSearch, index: thinkingSteps[idx].index)
+                        thinkingSteps[idx].status = .completed
+                        thinkingSteps[idx].output = output
+                    case "failed":
+                        thinkingSteps[idx] = ThinkingStep(stageName: "Web Search (offline)", stageKind: .webSearch, index: thinkingSteps[idx].index)
+                        thinkingSteps[idx].status = .completed
+                        thinkingSteps[idx].output = output
+                    default:
+                        break
+                    }
+                }
             }
             if currentStreamingStageName == name {
                 currentStreamingContent = ""
@@ -288,6 +304,11 @@ final class ChatViewModel {
                     stageKind: .webSearch,
                     index: thinkingSteps[idx].index
                 )
+            }
+
+        case .modelFallbackUsed(let stageName):
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == stageName }) {
+                thinkingSteps[idx].usedFallback = true
             }
 
         case .pipelineCompleted, .pipelineFailed:

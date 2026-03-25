@@ -1,20 +1,30 @@
 import Foundation
 import FoundationModels
+import os
 
 // MARK: - Foundation Model Provider
 
 @available(iOS 26.0, macOS 26.0, *)
-public final class FoundationModelProvider: ModelProvider, Sendable {
+public final class FoundationModelProvider: ModelProvider, @unchecked Sendable {
+
+    private let _lastCallUsedFallback = OSAllocatedUnfairLock(initialState: false)
+
+    /// Whether the most recent generate/generateStream call used the fallback path
+    /// (instructions embedded in user prompt instead of the instructions: parameter).
+    public var lastCallUsedFallback: Bool {
+        _lastCallUsedFallback.withLock { $0 }
+    }
 
     public init() {}
 
     public func generate(systemPrompt: String?, userPrompt: String) async throws -> String {
+        _lastCallUsedFallback.withLock { $0 = false }
         guard SystemLanguageModel.default.isAvailable else {
             throw StageError.modelUnavailable
         }
 
         if let systemPrompt, !systemPrompt.isEmpty {
-            // Primary: pass systemPrompt as real instructions
+            // Primary: pass systemPrompt as real instructions with thinking
             let sanitized = Self.sanitizeInstructions(systemPrompt)
             let session = LanguageModelSession(instructions: sanitized)
             do {
@@ -23,6 +33,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
             } catch {
                 if Self.isSafetyFilterError(error) {
                     // Fallback: embed instructions in user prompt (degraded but avoids safety guard)
+                    _lastCallUsedFallback.withLock { $0 = true }
                     return try await Self.generateFallback(systemPrompt: systemPrompt, userPrompt: userPrompt)
                 }
                 if Self.isContextTooLongError(error) {
@@ -48,7 +59,8 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
     }
 
     public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
+        _lastCallUsedFallback.withLock { $0 = false }
+        return AsyncThrowingStream { continuation in
             Task {
                 guard SystemLanguageModel.default.isAvailable else {
                     continuation.finish(throwing: StageError.modelUnavailable)
@@ -58,7 +70,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                 let hasInstructions = systemPrompt != nil && !systemPrompt!.isEmpty
 
                 if hasInstructions {
-                    // Primary: pass systemPrompt as real instructions
+                    // Primary: pass systemPrompt as real instructions with thinking
                     let sanitized = Self.sanitizeInstructions(systemPrompt!)
                     let session = LanguageModelSession(instructions: sanitized)
                     var yieldedContent = false
@@ -74,6 +86,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                     } catch {
                         if Self.isSafetyFilterError(error) && !yieldedContent {
                             // Fallback: retry without instructions parameter
+                            self._lastCallUsedFallback.withLock { $0 = true }
                             let fallbackSession = LanguageModelSession()
                             let fallbackPrompt = Self.buildPrompt(systemPrompt: systemPrompt, userPrompt: userPrompt)
                             do {
@@ -92,7 +105,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                         return
                     }
                 } else {
-                    // No system prompt: original behavior
+                    // No system prompt: thinking only
                     let session = LanguageModelSession()
                     do {
                         let stream = session.streamResponse(to: userPrompt)

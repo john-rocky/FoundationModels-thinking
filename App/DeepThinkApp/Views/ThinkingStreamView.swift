@@ -51,6 +51,14 @@ struct ThinkingStreamView: View {
                                 Text(step.stageName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                if step.usedFallback {
+                                    Text("fallback")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(.orange.opacity(0.15), in: Capsule())
+                                }
                             }
                         }
                     }
