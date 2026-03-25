@@ -42,6 +42,7 @@ public struct CSPSolution: Sendable {
 
     public func ordered() -> [(variable: String, value: String)] {
         assignment.sorted { (Int($0.value) ?? 0) < (Int($1.value) ?? 0) }
+            .map { (variable: $0.key, value: $0.value) }
     }
 
     public func asPositionString() -> String {
