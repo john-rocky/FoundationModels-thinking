@@ -27,7 +27,8 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
         )
 
         // Stage count: Analyze + Solve + (Critique + Revise) * maxLoops + Finalize
-        let estimatedStageCount = 2 + configuration.maxCritiqueReviseLoops * 2 + 1
+        let searchStageCount = configuration.webSearchEnabled ? 1 : 0
+        let estimatedStageCount = 2 + configuration.maxCritiqueReviseLoops * 2 + 1 + searchStageCount
         await context.emit(.pipelineStarted(pipelineName: name, stageCount: estimatedStageCount))
 
         var allOutputs: [StageOutput] = []
@@ -41,7 +42,13 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
         )
 
         do {
-            // Stage 1: Analyze
+            // Optional: Web Search
+            let _ = try await executeWebSearchIfEnabled(
+                query: query, context: context, configuration: configuration,
+                allOutputs: &allOutputs, stageIndex: &stageIndex
+            )
+
+            // Stage: Analyze
             await context.emit(.stageStarted(stageName: "Analyze", stageKind: .analyze, index: stageIndex))
             let analyzeInput = await context.buildInput(query: query)
             let analyzeOutput = try await executeWithRetry(

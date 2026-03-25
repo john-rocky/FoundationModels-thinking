@@ -23,12 +23,32 @@ public struct DirectPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .pipelineStarted(name: name, query: query)
         )
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 1))
+        let searchStageCount = configuration.webSearchEnabled ? 1 : 0
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 1 + searchStageCount))
 
+        // Optional: Web Search
+        var webSearchContent = ""
+        if configuration.webSearchEnabled {
+            let stage = WebSearchStage(maxResults: configuration.maxSearchResults)
+            await context.emit(.stageStarted(stageName: stage.name, stageKind: .webSearch, index: 0))
+            do {
+                let input = await context.buildInput(query: query)
+                let searchOutput = try await executeWithRetry(stage: stage, input: input, context: context)
+                await context.setOutput(searchOutput, for: "WebSearch")
+                await context.emit(.stageCompleted(stageName: stage.name, stageKind: .webSearch, output: searchOutput, index: 0))
+                if searchOutput.metadata["searchDecision"] == "searched" {
+                    webSearchContent = "\n\n[Web Search Results]\n\(truncate(searchOutput.content, to: 600))"
+                }
+            } catch {
+                await context.emit(.stageFailed(stageName: stage.name, error: "\(error)"))
+            }
+        }
+
+        let directIndex = searchStageCount
         await context.traceCollector.record(
             event: .stageStarted(stage: "Direct", kind: .solve, input: query)
         )
-        await context.emit(.stageStarted(stageName: "Direct", stageKind: .solve, index: 0))
+        await context.emit(.stageStarted(stageName: "Direct", stageKind: .solve, index: directIndex))
 
         let raw: String
         do {
@@ -37,6 +57,7 @@ public struct DirectPipeline: Pipeline, Sendable {
             if !memory.isEmpty {
                 userPrompt += formatMemoryContext(memory, language: context.language)
             }
+            userPrompt += webSearchContent
             do {
                 raw = try await streamingGenerate(
                     stageName: "Direct",
@@ -45,11 +66,11 @@ public struct DirectPipeline: Pipeline, Sendable {
                     context: context
                 )
             } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
-                // Retry without memory context
+                // Retry without memory context (keep web search results)
                 raw = try await streamingGenerate(
                     stageName: "Direct",
                     systemPrompt: "Answer the question accurately and clearly.",
-                    userPrompt: query,
+                    userPrompt: query + webSearchContent,
                     context: context
                 )
             }
@@ -73,7 +94,7 @@ public struct DirectPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .stageCompleted(stage: "Direct", output: output)
         )
-        await context.emit(.stageCompleted(stageName: "Direct", stageKind: .solve, output: output, index: 0))
+        await context.emit(.stageCompleted(stageName: "Direct", stageKind: .solve, output: output, index: directIndex))
 
         let endTime = Date.now
         let trace = await context.traceCollector.allRecords()

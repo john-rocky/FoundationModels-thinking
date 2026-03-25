@@ -13,6 +13,11 @@ final class ChatViewModel {
     var showTrace = false
     var showMemoryBrowser = false
     var errorMessage: String?
+    var webSearchEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(webSearchEnabled, forKey: "webSearchEnabled")
+        }
+    }
     private var currentTask: Task<Void, Never>?
 
     var appLanguage: AppLanguage {
@@ -51,6 +56,7 @@ final class ChatViewModel {
         } else {
             self.appLanguage = .japanese
         }
+        self.webSearchEnabled = UserDefaults.standard.bool(forKey: "webSearchEnabled")
         createNewConversation()
     }
 
@@ -122,8 +128,12 @@ final class ChatViewModel {
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
+            let config = PipelineConfiguration(
+                webSearchEnabled: webSearchEnabled
+            )
             let pipeline = PipelineFactory.create(
-                kind: selectedPipelineKind
+                kind: selectedPipelineKind,
+                configuration: config
             )
 
             let resultTask = Task.detached { () -> PipelineResult in
@@ -259,6 +269,25 @@ final class ChatViewModel {
         case .loopEnded:
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName.hasPrefix("Loop") }) {
                 thinkingSteps[idx].status = .completed
+            }
+
+        case .webSearchStarted(let keywords):
+            // Step already created by stageStarted — just update streaming content
+            currentStreamingStageName = "WebSearch"
+            currentStreamingContent = "Searching: \(keywords)"
+
+        case .webSearchCompleted:
+            // stageCompleted will handle marking the step as completed
+            break
+
+        case .webSearchSkipped:
+            // Rename the existing step to indicate it was skipped
+            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == "WebSearch" }) {
+                thinkingSteps[idx] = ThinkingStep(
+                    stageName: "Web Search (skipped)",
+                    stageKind: .webSearch,
+                    index: thinkingSteps[idx].index
+                )
             }
 
         case .pipelineCompleted, .pipelineFailed:

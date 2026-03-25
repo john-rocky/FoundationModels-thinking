@@ -90,6 +90,16 @@ enum PipelineLogger {
 
         case .stageStreamingContent:
             break
+
+        case .webSearchStarted(let keywords):
+            print("\n\(divider)")
+            print("[WebSearch] Searching: \(keywords)")
+
+        case .webSearchCompleted(let count):
+            print("[WebSearch] Found \(count) results")
+
+        case .webSearchSkipped(let reason):
+            print("[WebSearch] Skipped: \(reason)")
         }
         #endif
     }

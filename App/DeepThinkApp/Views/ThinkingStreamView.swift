@@ -39,9 +39,15 @@ struct ThinkingStreamView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         ForEach(completedSteps) { step in
                             HStack(spacing: 6) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(.green)
+                                if step.stageKind == .webSearch {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.caption2)
+                                        .foregroundStyle(.blue)
+                                } else {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(.green)
+                                }
                                 Text(step.stageName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -59,8 +65,15 @@ struct ThinkingStreamView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            ProgressView()
-                                .controlSize(.mini)
+                            if currentStep.stageKind == .webSearch {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.blue)
+                                    .symbolEffect(.pulse)
+                            } else {
+                                ProgressView()
+                                    .controlSize(.mini)
+                            }
                             Text(currentStep.stageName)
                                 .font(.subheadline.bold())
                                 .foregroundStyle(.primary)

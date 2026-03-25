@@ -33,13 +33,20 @@ public struct BranchMergePipeline: Pipeline, Sendable {
         )
 
         // Analyze + parallel branches (counted as 1) + Merge + Finalize
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 4))
+        let searchStageCount = configuration.webSearchEnabled ? 1 : 0
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 4 + searchStageCount))
 
         var allOutputs: [StageOutput] = []
         var stageIndex = 0
 
         do {
-            // Stage 1: Analyze
+            // Optional: Web Search
+            let _ = try await executeWebSearchIfEnabled(
+                query: query, context: context, configuration: configuration,
+                allOutputs: &allOutputs, stageIndex: &stageIndex
+            )
+
+            // Stage: Analyze
             await context.emit(.stageStarted(stageName: "Analyze", stageKind: .analyze, index: stageIndex))
             let analyzeInput = await context.buildInput(query: query)
             let analyzeOutput = try await executeWithRetry(

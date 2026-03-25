@@ -14,6 +14,7 @@ public enum StageKind: String, Codable, Sendable, CaseIterable {
     case merge
     case aggregate
     case custom
+    case webSearch
 }
 
 // MARK: - Stage Input

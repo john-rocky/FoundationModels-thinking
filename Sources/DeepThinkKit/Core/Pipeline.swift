@@ -9,6 +9,8 @@ public struct PipelineConfiguration: Sendable, Codable {
     public var convergenceThreshold: Double
     public var confidenceThreshold: Double
     public var branchCount: Int
+    public var webSearchEnabled: Bool
+    public var maxSearchResults: Int
 
     public init(
         maxStages: Int = 20,
@@ -16,7 +18,9 @@ public struct PipelineConfiguration: Sendable, Codable {
         maxRetries: Int = 2,
         convergenceThreshold: Double = 0.1,
         confidenceThreshold: Double = 0.7,
-        branchCount: Int = 3
+        branchCount: Int = 3,
+        webSearchEnabled: Bool = false,
+        maxSearchResults: Int = 5
     ) {
         self.maxStages = maxStages
         self.maxCritiqueReviseLoops = maxCritiqueReviseLoops
@@ -24,6 +28,8 @@ public struct PipelineConfiguration: Sendable, Codable {
         self.convergenceThreshold = convergenceThreshold
         self.confidenceThreshold = confidenceThreshold
         self.branchCount = branchCount
+        self.webSearchEnabled = webSearchEnabled
+        self.maxSearchResults = maxSearchResults
     }
 
     public static let `default` = PipelineConfiguration()

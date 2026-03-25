@@ -26,13 +26,21 @@ public struct VerifiedPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .pipelineStarted(name: name, query: query)
         )
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 3))
+        let searchStageCount = configuration.webSearchEnabled ? 1 : 0
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 3 + searchStageCount))
 
         var allOutputs: [StageOutput] = []
+        var stageIndex = 0
 
         do {
-            // Stage 1: Extract constraints (LLM)
-            await context.emit(.stageStarted(stageName: "Extract", stageKind: .analyze, index: 0))
+            // Optional: Web Search
+            let _ = try await executeWebSearchIfEnabled(
+                query: query, context: context, configuration: configuration,
+                allOutputs: &allOutputs, stageIndex: &stageIndex
+            )
+
+            // Stage: Extract constraints (LLM)
+            await context.emit(.stageStarted(stageName: "Extract", stageKind: .analyze, index: stageIndex))
             let extractInput = await context.buildInput(query: query)
             let extractOutput = try await executeWithRetry(
                 stage: ExtractConstraintsStage(),
@@ -41,18 +49,20 @@ public struct VerifiedPipeline: Pipeline, Sendable {
             )
             allOutputs.append(extractOutput)
             await context.setOutput(extractOutput, for: "Extract")
-            await context.emit(.stageCompleted(stageName: "Extract", stageKind: .analyze, output: extractOutput, index: 0))
+            await context.emit(.stageCompleted(stageName: "Extract", stageKind: .analyze, output: extractOutput, index: stageIndex))
+            stageIndex += 1
 
-            // Stage 2: Deterministic solve (no LLM)
-            await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: 1))
+            // Stage: Deterministic solve (no LLM)
+            await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
             let solveInput = await context.buildInput(query: query)
             let solveOutput = try await DeterministicSolveStage().execute(input: solveInput, context: context)
             allOutputs.append(solveOutput)
             await context.setOutput(solveOutput, for: "Solve")
-            await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: 1))
+            await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
+            stageIndex += 1
 
-            // Stage 3: Explain (LLM)
-            await context.emit(.stageStarted(stageName: "Explain", stageKind: .finalize, index: 2))
+            // Stage: Explain (LLM)
+            await context.emit(.stageStarted(stageName: "Explain", stageKind: .finalize, index: stageIndex))
             let explainInput = await context.buildInput(query: query)
             let explainOutput = try await executeWithRetry(
                 stage: ExplainStage(),
@@ -60,7 +70,7 @@ public struct VerifiedPipeline: Pipeline, Sendable {
                 context: context
             )
             allOutputs.append(explainOutput)
-            await context.emit(.stageCompleted(stageName: "Explain", stageKind: .finalize, output: explainOutput, index: 2))
+            await context.emit(.stageCompleted(stageName: "Explain", stageKind: .finalize, output: explainOutput, index: stageIndex))
 
             let endTime = Date.now
             let trace = await context.traceCollector.allRecords()

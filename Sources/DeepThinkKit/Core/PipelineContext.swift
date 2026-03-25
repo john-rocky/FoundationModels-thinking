@@ -31,6 +31,7 @@ public actor PipelineContext {
 
     private var stageOutputs: [String: StageOutput] = [:]
     private var retrievedMemory: [MemoryEntry] = []
+    private var _webSearchResults: [WebSearchResult] = []
     private var eventContinuation: AsyncStream<PipelineEvent>.Continuation?
 
     public init(
@@ -69,6 +70,14 @@ public actor PipelineContext {
 
     public func getRetrievedMemory() -> [MemoryEntry] {
         retrievedMemory
+    }
+
+    public func setWebSearchResults(_ results: [WebSearchResult]) {
+        _webSearchResults = results
+    }
+
+    public func getWebSearchResults() -> [WebSearchResult] {
+        _webSearchResults
     }
 
     // MARK: - Event Streaming

@@ -91,6 +91,13 @@ struct ChatView: View {
                         }
                     }
 
+                    // Web Search toggle
+                    Section("Search") {
+                        Toggle(isOn: $vm.webSearchEnabled) {
+                            Label("Web Search", systemImage: "magnifyingglass")
+                        }
+                    }
+
                     // Language selector
                     Section("Language") {
                         ForEach(AppLanguage.allCases) { lang in

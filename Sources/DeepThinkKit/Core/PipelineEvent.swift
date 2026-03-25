@@ -39,6 +39,15 @@ public enum PipelineEvent: Sendable {
 
     /// Pipeline execution failed
     case pipelineFailed(error: String)
+
+    /// Web search started with extracted keywords
+    case webSearchStarted(keywords: String)
+
+    /// Web search completed with results
+    case webSearchCompleted(resultCount: Int)
+
+    /// Web search skipped (LLM decided it's not needed)
+    case webSearchSkipped(reason: String)
 }
 
 public typealias PipelineEventStream = AsyncStream<PipelineEvent>

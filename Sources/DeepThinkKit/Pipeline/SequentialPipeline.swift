@@ -25,17 +25,26 @@ public struct SequentialPipeline: Pipeline, Sendable {
         await context.traceCollector.record(
             event: .pipelineStarted(name: name, query: query)
         )
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: stages.count))
+        let searchStageCount = configuration.webSearchEnabled ? 1 : 0
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: stages.count + searchStageCount))
 
         var allOutputs: [StageOutput] = []
+        var stageOffset = 0
 
         do {
+            // Optional: Web Search
+            let _ = try await executeWebSearchIfEnabled(
+                query: query, context: context, configuration: configuration,
+                allOutputs: &allOutputs, stageIndex: &stageOffset
+            )
+
             for (index, stage) in stages.enumerated() {
                 guard index < configuration.maxStages else {
                     break
                 }
 
-                await context.emit(.stageStarted(stageName: stage.name, stageKind: stage.kind, index: index))
+                let adjustedIndex = index + stageOffset
+                await context.emit(.stageStarted(stageName: stage.name, stageKind: stage.kind, index: adjustedIndex))
 
                 let input = await context.buildInput(query: query)
                 let output = try await executeWithRetry(
@@ -46,7 +55,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
 
                 allOutputs.append(output)
                 await context.setOutput(output, for: stage.name)
-                await context.emit(.stageCompleted(stageName: stage.name, stageKind: stage.kind, output: output, index: index))
+                await context.emit(.stageCompleted(stageName: stage.name, stageKind: stage.kind, output: output, index: adjustedIndex))
             }
         } catch {
             await context.emit(.pipelineFailed(error: "\(error)"))
