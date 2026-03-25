@@ -14,18 +14,14 @@ public struct ExtractConstraintsStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let systemPrompt: String
-        let schema = """
-        {"variables":["A","B","C"],"domain":["1","2","3"],"constraints":[{"type":"equal","args":["B","2"]},{"type":"notAdjacent","args":["A","C"]},{"type":"greaterThan","args":["C","A"]},{"type":"atBoundary","args":["A"]}]}
-        """
+        let systemPrompt = "Output ONLY valid JSON. No other text."
 
+        let userPrompt: String
         if context.language.isJapanese {
-            systemPrompt = "JSONのみ出力。説明不要。形式:\n\(schema)\ntype: equal(=), notEqual(≠), notAdjacent(隣接不可), lessThan(<), greaterThan(>), atBoundary(端)"
+            userPrompt = "以下の問題の制約をJSON化せよ。形式:{\"variables\":[...],\"domain\":[\"1\",\"2\",...],\"constraints\":[{\"type\":\"...\",\"args\":[...]}]}。type: equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary\n\n\(truncate(input.query, to: 400))"
         } else {
-            systemPrompt = "Output ONLY JSON. No explanation. Format:\n\(schema)\ntype: equal(=), notEqual(≠), notAdjacent(not next to), lessThan(<), greaterThan(>), atBoundary(at end)"
+            userPrompt = "Convert constraints to JSON: {\"variables\":[...],\"domain\":[\"1\",\"2\",...],\"constraints\":[{\"type\":\"...\",\"args\":[...]}]}. type: equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary\n\n\(truncate(input.query, to: 400))"
         }
-
-        let userPrompt = "Convert to JSON:\n\(truncate(input.query, to: 600))"
 
         let raw = try await streamingGenerate(
             stageName: name,
