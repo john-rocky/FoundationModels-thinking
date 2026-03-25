@@ -24,10 +24,10 @@ public struct MergeStage: Stage {
         let userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "以下の複数回答から、各回答の最も優れた部分を選んで統合してください。共通する内容は確度が高いとみなし、矛盾する部分は最も根拠のある方を採用すること。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "複数の回答から最も優れた部分を選び、一つの回答に統合してください。"
             userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【各回答】\n\(solveOutputs)"
         } else {
-            systemPrompt = "Select the best parts from each answer and integrate them. Treat common content as high-confidence and adopt the most well-supported side for contradictions. Confidence (0.0-1.0) at the end."
+            systemPrompt = "Select the best parts from each answer and integrate into one."
             userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
         }
 
@@ -72,10 +72,10 @@ public struct AggregateStage: Stage {
         let userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "以下の複数回答を比較分析してください。多数の回答が一致する内容を最も信頼し、独自の主張は根拠を検証して採否を判断すること。最終回答を出力してください。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "複数の回答を比較し、多数が一致する内容を信頼して最終回答を出力してください。"
             userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【各回答】\n\(solveOutputs)"
         } else {
-            systemPrompt = "Compare and analyze the following answers. Trust content where the majority agrees, verify evidence for unique claims. Output the final answer. Confidence (0.0-1.0) at the end."
+            systemPrompt = "Compare the answers. Trust majority consensus and output the final answer."
             userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
         }
 

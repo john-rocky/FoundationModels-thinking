@@ -23,12 +23,12 @@ public struct SolveStage: Stage {
         var userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "以下の分析と方針に従って回答を生成してください。分析で特定された観点を漏れなくカバーし、方針の手順に沿って構成すること。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "分析と方針に従って回答を生成してください。"
             userPrompt = "質問: \(truncate(input.query, to: 500))"
             if !analysis.isEmpty { userPrompt += "\n\n【分析結果】\n\(analysis)" }
             if !plan.isEmpty { userPrompt += "\n\n【回答方針】\n\(plan)" }
         } else {
-            systemPrompt = "Generate an answer following the analysis and plan below. Cover all perspectives identified in the analysis and structure according to the plan. Include confidence (0.0-1.0) at the end."
+            systemPrompt = "Generate an answer following the analysis and plan below."
             userPrompt = "Question: \(truncate(input.query, to: 500))"
             if !analysis.isEmpty { userPrompt += "\n\n[Analysis]\n\(analysis)" }
             if !plan.isEmpty { userPrompt += "\n\n[Plan]\n\(plan)" }

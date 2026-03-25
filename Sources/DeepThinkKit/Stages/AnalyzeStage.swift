@@ -16,9 +16,9 @@ public struct AnalyzeStage: Stage {
 
         let systemPrompt: String
         if context.language.isJapanese {
-            systemPrompt = "あなたは問題分析の専門家です。質問を分解し、以下を箇条書きで出力してください：(1)核心的な問い (2)必要な知識領域 (3)隠れた前提や制約 (4)非自明な構造（パリティ、不変量、対称性、彩色議論、保存則） (5)この問題が見た目より難しい理由は何か？ 回答は書かないこと。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "質問を分解し、核心・前提・隠れた制約を箇条書きで。回答は書かないこと。"
         } else {
-            systemPrompt = "You are an expert problem analyst. Decompose the question and output: (1) Core question (2) Required knowledge domains (3) Hidden assumptions or constraints (4) Non-obvious structure (parity, invariants, symmetry, coloring arguments, conservation laws) (5) Identify aspects that increase this problem's complexity beyond first appearances. Do not write the answer. Confidence (0.0-1.0) at the end."
+            systemPrompt = "Decompose the question. List the core problem, assumptions, and hidden constraints. Do not answer."
         }
 
         var userPrompt = truncate(input.query, to: 1000)

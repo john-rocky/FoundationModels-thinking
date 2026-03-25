@@ -24,36 +24,33 @@ public struct WebSearchStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        // Step 1: Ask LLM if search is needed
-        let decision = try await decideSearch(query: input.query, context: context)
+        // Step 1: Extract search keywords from query via LLM
+        let keywords = try await extractKeywords(query: input.query, context: context)
 
-        guard decision.shouldSearch, !decision.keywords.isEmpty else {
-            await context.emit(.webSearchSkipped(reason: decision.reason))
+        guard !keywords.isEmpty else {
+            let reason = "Could not extract search keywords"
+            await context.emit(.webSearchSkipped(reason: reason))
 
             let output = StageOutput(
                 stageKind: .webSearch,
-                content: context.language.isJapanese
-                    ? "Web search not needed: \(decision.reason)"
-                    : "Web search not needed: \(decision.reason)",
+                content: "Web search skipped: \(reason)",
                 confidence: 0.8,
-                metadata: ["searchDecision": "skipped", "reason": decision.reason]
+                metadata: ["searchDecision": "skipped", "reason": reason]
             )
             await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
             return output
         }
 
         // Step 2: Execute web search
-        await context.emit(.webSearchStarted(keywords: decision.keywords))
+        await context.emit(.webSearchStarted(keywords: keywords))
         await context.emit(.stageStreamingContent(
             stageName: name,
-            content: context.language.isJapanese
-                ? "Searching: \(decision.keywords)"
-                : "Searching: \(decision.keywords)"
+            content: "Searching: \(keywords)"
         ))
 
         let results: [WebSearchResult]
         do {
-            results = try await searchProvider.search(keywords: decision.keywords, maxResults: maxResults)
+            results = try await searchProvider.search(keywords: keywords, maxResults: maxResults)
         } catch {
             let output = StageOutput(
                 stageKind: .webSearch,
@@ -84,7 +81,7 @@ public struct WebSearchStage: Stage {
             confidence: results.isEmpty ? 0.3 : 0.8,
             metadata: [
                 "searchDecision": "searched",
-                "searchQuery": decision.keywords,
+                "searchQuery": keywords,
                 "resultCount": "\(results.count)"
             ]
         )
@@ -95,29 +92,19 @@ public struct WebSearchStage: Stage {
         return output
     }
 
-    // MARK: - LLM Decision
+    // MARK: - Keyword Extraction
 
-    private func decideSearch(query: String, context: PipelineContext) async throws -> SearchDecision {
+    private func extractKeywords(query: String, context: PipelineContext) async throws -> String {
         let systemPrompt: String
         if context.language.isJapanese {
             systemPrompt = """
-            ユーザーの質問にウェブ検索が有用か判断してください。
-            最新情報・具体的事実・統計・ニュース・製品情報が必要ならYES。
-            一般知識・数学・論理・概念説明で十分ならNO。
-            以下の形式で回答：
-            SEARCH: YES or NO
-            REASON: 理由1行
-            KEYWORDS: 検索語3-5語（NOなら空）
+            質問からウェブ検索用のキーワードを3〜5語で抽出してください。
+            キーワードのみを1行で出力してください。説明は不要です。
             """
         } else {
             systemPrompt = """
-            Decide if web search would help answer this question.
-            YES if it needs current info, specific facts, statistics, news, or product details.
-            NO if general knowledge, math, logic, or concepts suffice.
-            Format:
-            SEARCH: YES or NO
-            REASON: one line
-            KEYWORDS: 3-5 search terms (empty if NO)
+            Extract 3-5 search keywords from the question for a web search.
+            Output only the keywords on a single line. No explanation needed.
             """
         }
 
@@ -126,29 +113,10 @@ public struct WebSearchStage: Stage {
             userPrompt: truncate(query, to: 500)
         )
 
-        return parseSearchDecision(raw)
-    }
-
-    private func parseSearchDecision(_ raw: String) -> SearchDecision {
-        let lines = raw.components(separatedBy: .newlines)
-        var shouldSearch = false
-        var reason = ""
-        var keywords = ""
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let upper = trimmed.uppercased()
-            if upper.hasPrefix("SEARCH:") {
-                let value = String(trimmed.dropFirst(7)).trimmingCharacters(in: .whitespaces).uppercased()
-                shouldSearch = value.hasPrefix("YES")
-            } else if upper.hasPrefix("REASON:") {
-                reason = String(trimmed.dropFirst(7)).trimmingCharacters(in: .whitespaces)
-            } else if upper.hasPrefix("KEYWORDS:") {
-                keywords = String(trimmed.dropFirst(9)).trimmingCharacters(in: .whitespaces)
-            }
-        }
-
-        return SearchDecision(shouldSearch: shouldSearch, reason: reason, keywords: keywords)
+        return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
     }
 
     // MARK: - Formatting

@@ -24,11 +24,6 @@ func streamingGenerate(
         finalContent = partial
         await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
     }
-    // Check if the model provider used fallback path
-    if let provider = context.modelProvider as? FoundationModelProvider,
-       provider.lastCallUsedFallback {
-        await context.emit(.modelFallbackUsed(stageName: stageName))
-    }
     return finalContent
 }
 

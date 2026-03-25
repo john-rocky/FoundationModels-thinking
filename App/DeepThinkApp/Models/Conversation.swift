@@ -42,8 +42,6 @@ struct ThinkingStep: Identifiable {
     var output: StageOutput?
     var branchOutputs: [String: StageOutput]
     var streamingContent: String
-    var usedFallback: Bool
-
     enum StepStatus {
         case running
         case completed
@@ -64,7 +62,6 @@ struct ThinkingStep: Identifiable {
         self.output = nil
         self.branchOutputs = [:]
         self.streamingContent = ""
-        self.usedFallback = false
     }
 }
 

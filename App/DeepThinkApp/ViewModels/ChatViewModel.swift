@@ -306,11 +306,6 @@ final class ChatViewModel {
                 )
             }
 
-        case .modelFallbackUsed(let stageName):
-            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == stageName }) {
-                thinkingSteps[idx].usedFallback = true
-            }
-
         case .pipelineCompleted, .pipelineFailed:
             break
         }

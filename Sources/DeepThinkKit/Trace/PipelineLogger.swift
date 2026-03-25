@@ -101,9 +101,7 @@ enum PipelineLogger {
         case .webSearchSkipped(let reason):
             print("[WebSearch] Skipped: \(reason)")
 
-        case .modelFallbackUsed(let stageName):
-            print("[\(stageName)] ⚠ Used fallback path (instructions embedded in prompt)")
-        }
+}
         #endif
     }
 

@@ -20,10 +20,10 @@ public struct PlanStage: Stage {
         let userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "あなたは回答設計者です。分析結果を踏まえ、最良の回答を組み立てるための具体的な手順を箇条書きで設計してください。各手順は「何を、どう述べるか」を明示すること。回答本文は書かないこと。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "分析結果をもとに、回答の手順を箇条書きで設計してください。回答本文は書かないこと。"
             userPrompt = "質問: \(truncate(input.query, to: 400))\n\n【分析結果】\n\(analysis)"
         } else {
-            systemPrompt = "You are a response architect. Based on the analysis, design concrete steps as bullet points to construct the best answer. Each step must specify what to say and how. DO NOT write the answer itself. Include confidence (0.0-1.0) at the end."
+            systemPrompt = "Based on the analysis, design answer steps as bullet points. Do not write the answer itself."
             userPrompt = "Question: \(truncate(input.query, to: 400))\n\n[Analysis]\n\(analysis)"
         }
 

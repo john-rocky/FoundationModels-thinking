@@ -20,8 +20,8 @@ public struct ExplainStage: Stage {
         // If solver failed, fall back to direct LLM answer
         if solverStatus == "parse_failed" {
             let systemPrompt = context.language.isJapanese
-                ? "質問に直接回答してください。確信度(0.0-1.0)も末尾に。"
-                : "Answer the question directly. Include confidence (0.0-1.0) at the end."
+                ? "質問に直接回答してください。"
+                : "Answer the question directly."
             let raw = try await streamingGenerate(
                 stageName: name,
                 systemPrompt: systemPrompt,
@@ -38,10 +38,10 @@ public struct ExplainStage: Stage {
         let userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "以下の検証済み解を元に、元の問題への回答を分かりやすく説明してください。なぜこの解が正しいか、制約をどう満たすかを示すこと。"
+            systemPrompt = "検証済みの解を元に、回答を分かりやすく説明してください。"
             userPrompt = "問題: \(truncate(input.query, to: 400))\n\n【検証済み解】\n\(solutionText)"
         } else {
-            systemPrompt = "Based on the verified solution below, explain the answer to the original problem clearly. Show why this solution is correct and how it satisfies each constraint."
+            systemPrompt = "Explain the verified solution clearly to answer the original problem."
             userPrompt = "Problem: \(truncate(input.query, to: 400))\n\n[Verified Solution]\n\(solutionText)"
         }
 

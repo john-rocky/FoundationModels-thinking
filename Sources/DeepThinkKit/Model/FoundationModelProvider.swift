@@ -1,161 +1,68 @@
 import Foundation
 import FoundationModels
-import os
 
 // MARK: - Foundation Model Provider
 
 @available(iOS 26.0, macOS 26.0, *)
-public final class FoundationModelProvider: ModelProvider, @unchecked Sendable {
-
-    private let _lastCallUsedFallback = OSAllocatedUnfairLock(initialState: false)
-
-    /// Whether the most recent generate/generateStream call used the fallback path
-    /// (instructions embedded in user prompt instead of the instructions: parameter).
-    public var lastCallUsedFallback: Bool {
-        _lastCallUsedFallback.withLock { $0 }
-    }
+public final class FoundationModelProvider: ModelProvider, Sendable {
 
     public init() {}
 
     public func generate(systemPrompt: String?, userPrompt: String) async throws -> String {
-        _lastCallUsedFallback.withLock { $0 = false }
         guard SystemLanguageModel.default.isAvailable else {
             throw StageError.modelUnavailable
         }
 
+        let session: LanguageModelSession
         if let systemPrompt, !systemPrompt.isEmpty {
-            // Primary: pass systemPrompt as real instructions with thinking
-            let sanitized = Self.sanitizeInstructions(systemPrompt)
-            let session = LanguageModelSession(instructions: sanitized)
-            do {
-                let response = try await session.respond(to: userPrompt)
-                return response.content
-            } catch {
-                if Self.isSafetyFilterError(error) {
-                    // Fallback: embed instructions in user prompt (degraded but avoids safety guard)
-                    _lastCallUsedFallback.withLock { $0 = true }
-                    return try await Self.generateFallback(systemPrompt: systemPrompt, userPrompt: userPrompt)
-                }
-                if Self.isContextTooLongError(error) {
-                    throw ModelError.contextTooLong
-                }
-                throw error
-            }
+            session = LanguageModelSession(instructions: systemPrompt)
         } else {
-            let session = LanguageModelSession()
-            do {
-                let response = try await session.respond(to: userPrompt)
-                return response.content
-            } catch {
-                if Self.isSafetyFilterError(error) {
-                    throw ModelError.safetyFilterViolation
-                }
-                if Self.isContextTooLongError(error) {
-                    throw ModelError.contextTooLong
-                }
-                throw error
-            }
+            session = LanguageModelSession()
         }
-    }
 
-    public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
-        _lastCallUsedFallback.withLock { $0 = false }
-        return AsyncThrowingStream { continuation in
-            Task {
-                guard SystemLanguageModel.default.isAvailable else {
-                    continuation.finish(throwing: StageError.modelUnavailable)
-                    return
-                }
-
-                let hasInstructions = systemPrompt != nil && !systemPrompt!.isEmpty
-
-                if hasInstructions {
-                    // Primary: pass systemPrompt as real instructions with thinking
-                    let sanitized = Self.sanitizeInstructions(systemPrompt!)
-                    let session = LanguageModelSession(instructions: sanitized)
-                    var yieldedContent = false
-
-                    do {
-                        let stream = session.streamResponse(to: userPrompt)
-                        for try await partial in stream {
-                            yieldedContent = true
-                            continuation.yield(partial.content)
-                        }
-                        continuation.finish()
-                        return
-                    } catch {
-                        if Self.isSafetyFilterError(error) && !yieldedContent {
-                            // Fallback: retry without instructions parameter
-                            self._lastCallUsedFallback.withLock { $0 = true }
-                            let fallbackSession = LanguageModelSession()
-                            let fallbackPrompt = Self.buildPrompt(systemPrompt: systemPrompt, userPrompt: userPrompt)
-                            do {
-                                let fallbackStream = fallbackSession.streamResponse(to: fallbackPrompt)
-                                for try await partial in fallbackStream {
-                                    continuation.yield(partial.content)
-                                }
-                                continuation.finish()
-                                return
-                            } catch {
-                                Self.finishWithError(error, continuation: continuation)
-                                return
-                            }
-                        }
-                        Self.finishWithError(error, continuation: continuation)
-                        return
-                    }
-                } else {
-                    // No system prompt: thinking only
-                    let session = LanguageModelSession()
-                    do {
-                        let stream = session.streamResponse(to: userPrompt)
-                        for try await partial in stream {
-                            continuation.yield(partial.content)
-                        }
-                        continuation.finish()
-                    } catch {
-                        Self.finishWithError(error, continuation: continuation)
-                    }
-                }
-            }
-        }
-    }
-
-    /// Fallback generation: embeds instructions in user prompt when instructions: parameter triggers safety guard
-    private static func generateFallback(systemPrompt: String, userPrompt: String) async throws -> String {
-        let fallbackSession = LanguageModelSession()
         do {
-            let response = try await fallbackSession.respond(
-                to: buildPrompt(systemPrompt: systemPrompt, userPrompt: userPrompt)
-            )
+            let response = try await session.respond(to: userPrompt)
             return response.content
         } catch {
-            if isSafetyFilterError(error) {
+            if Self.isSafetyFilterError(error) {
                 throw ModelError.safetyFilterViolation
             }
-            if isContextTooLongError(error) {
+            if Self.isContextTooLongError(error) {
                 throw ModelError.contextTooLong
             }
             throw error
         }
     }
 
-    /// Sanitize instructions to reduce safety guard triggers by replacing aggressive language
-    private static func sanitizeInstructions(_ instructions: String) -> String {
-        var result = instructions
-        let replacements: [(String, String)] = [
-            ("ASSUME the answer below is WRONG", "Carefully evaluate whether the answer below is correct"),
-            ("ASSUME the answer is WRONG", "Carefully evaluate whether the answer is correct"),
-            ("間違っていると仮定", "正しいかどうか慎重に検証"),
-            ("反証する反例を見つけよ", "反例がないか検討してください"),
-        ]
-        for (pattern, replacement) in replacements {
-            result = result.replacingOccurrences(of: pattern, with: replacement)
+    public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                guard SystemLanguageModel.default.isAvailable else {
+                    continuation.finish(throwing: StageError.modelUnavailable)
+                    return
+                }
+
+                let session: LanguageModelSession
+                if let systemPrompt, !systemPrompt.isEmpty {
+                    session = LanguageModelSession(instructions: systemPrompt)
+                } else {
+                    session = LanguageModelSession()
+                }
+
+                do {
+                    let stream = session.streamResponse(to: userPrompt)
+                    for try await partial in stream {
+                        continuation.yield(partial.content)
+                    }
+                    continuation.finish()
+                } catch {
+                    Self.finishWithError(error, continuation: continuation)
+                }
+            }
         }
-        return result
     }
 
-    /// Finish a stream continuation with a classified error
+
     private static func finishWithError(_ error: Error, continuation: AsyncThrowingStream<String, Error>.Continuation) {
         if isSafetyFilterError(error) {
             continuation.finish(throwing: ModelError.safetyFilterViolation)
@@ -164,13 +71,6 @@ public final class FoundationModelProvider: ModelProvider, @unchecked Sendable {
         } else {
             continuation.finish(throwing: error)
         }
-    }
-
-    private static func buildPrompt(systemPrompt: String?, userPrompt: String) -> String {
-        if let systemPrompt, !systemPrompt.isEmpty {
-            return "[Instructions]\n\(systemPrompt)\n\n[Query]\n\(userPrompt)"
-        }
-        return userPrompt
     }
 
     private static func isSafetyFilterError(_ error: Error) -> Bool {
