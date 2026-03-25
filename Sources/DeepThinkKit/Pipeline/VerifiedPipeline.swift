@@ -3,6 +3,7 @@ import Foundation
 // MARK: - Verified Pipeline
 // Extract Constraints -> Deterministic Solve -> Explain
 
+@available(iOS 26.0, macOS 26.0, *)
 public struct VerifiedPipeline: Pipeline, Sendable {
     public let name = "Verified"
     public let description = "Extract → Solve (deterministic) → Explain"

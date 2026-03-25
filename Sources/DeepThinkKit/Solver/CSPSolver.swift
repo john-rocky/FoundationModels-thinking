@@ -2,6 +2,7 @@ import Foundation
 
 // MARK: - Deterministic CSP Solver
 
+@available(iOS 26.0, macOS 26.0, *)
 public struct CSPSolver: Sendable {
     public static let maxPermutations = 40_320 // 8!
 
@@ -49,7 +50,8 @@ public struct CSPSolver: Sendable {
         constraint: CSPConstraint,
         domainSize: Int
     ) -> Bool {
-        switch constraint.type {
+        guard let cType = ConstraintType(rawValue: constraint.type) else { return true }
+        switch cType {
         case .equal:
             guard constraint.args.count >= 2,
                   let val = assignment[constraint.args[0]] else { return true }

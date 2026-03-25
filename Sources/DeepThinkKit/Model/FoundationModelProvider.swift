@@ -15,7 +15,7 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
 
         let session = LanguageModelSession()
         do {
-            let response = try await session.respond(to: userPrompt)
+            let response = try await session.respond(to: Self.buildPrompt(systemPrompt: systemPrompt, userPrompt: userPrompt))
             return response.content
         } catch {
             if Self.isSafetyFilterError(error) {
@@ -37,9 +37,10 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                 }
 
                 let session = LanguageModelSession()
+                let fullPrompt = Self.buildPrompt(systemPrompt: systemPrompt, userPrompt: userPrompt)
 
                 do {
-                    let stream = session.streamResponse(to: userPrompt)
+                    let stream = session.streamResponse(to: fullPrompt)
                     for try await partial in stream {
                         continuation.yield(partial.content)
                     }
@@ -55,6 +56,13 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                 }
             }
         }
+    }
+
+    private static func buildPrompt(systemPrompt: String?, userPrompt: String) -> String {
+        if let systemPrompt, !systemPrompt.isEmpty {
+            return "[Instructions]\n\(systemPrompt)\n\n[Query]\n\(userPrompt)"
+        }
+        return userPrompt
     }
 
     private static func isSafetyFilterError(_ error: Error) -> Bool {

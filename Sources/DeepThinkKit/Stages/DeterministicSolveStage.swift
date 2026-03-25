@@ -2,6 +2,7 @@ import Foundation
 
 // MARK: - Deterministic Solve Stage (No LLM)
 
+@available(iOS 26.0, macOS 26.0, *)
 public struct DeterministicSolveStage: Stage {
     public let kind: StageKind = .solve
     public let name = "Solve"

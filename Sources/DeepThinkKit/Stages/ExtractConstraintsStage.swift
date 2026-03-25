@@ -1,7 +1,9 @@
 import Foundation
+import FoundationModels
 
-// MARK: - Extract Constraints Stage (LLM)
+// MARK: - Extract Constraints Stage (LLM with @Generable)
 
+@available(iOS 26.0, macOS 26.0, *)
 public struct ExtractConstraintsStage: Stage {
     public let kind: StageKind = .analyze
     public let name = "Extract"
@@ -14,48 +16,55 @@ public struct ExtractConstraintsStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let systemPrompt = "Output ONLY valid JSON. No other text."
+        guard SystemLanguageModel.default.isAvailable else {
+            throw StageError.modelUnavailable
+        }
 
-        let userPrompt: String
+        let instructions: String
         if context.language.isJapanese {
-            userPrompt = "以下の問題の制約をJSON化せよ。形式:{\"variables\":[...],\"domain\":[\"1\",\"2\",...],\"constraints\":[{\"type\":\"...\",\"args\":[...]}]}。type: equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary\n\n\(truncate(input.query, to: 400))"
+            instructions = "問題文から制約を抽出してください。変数名、位置のドメイン、制約の種類(equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary)を正確に。"
         } else {
-            userPrompt = "Convert constraints to JSON: {\"variables\":[...],\"domain\":[\"1\",\"2\",...],\"constraints\":[{\"type\":\"...\",\"args\":[...]}]}. type: equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary\n\n\(truncate(input.query, to: 400))"
+            instructions = "Extract constraints from the problem. Use variable names, position domain, and constraint types: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary."
         }
 
-        let raw = try await streamingGenerate(
-            stageName: name,
-            systemPrompt: systemPrompt,
-            userPrompt: userPrompt,
-            context: context
-        )
+        let session = LanguageModelSession(instructions: instructions)
 
-        let parsed = Self.parseCSP(from: raw)
-        var metadata: [String: String] = [:]
-        if let problem = parsed, let json = try? JSONEncoder().encode(problem) {
-            metadata["csp_json"] = String(data: json, encoding: .utf8) ?? ""
-            metadata["csp_valid"] = "true"
-        } else {
-            metadata["csp_valid"] = "false"
+        do {
+            let response = try await session.respond(
+                to: truncate(input.query, to: 500),
+                generating: CSPProblem.self
+            )
+
+            let problem = response.content
+            await context.emit(.stageStreamingContent(stageName: name, content: "Extracted \(problem.variables.count) variables, \(problem.constraints.count) constraints"))
+
+            var metadata: [String: String] = ["csp_valid": "true"]
+            if let json = try? JSONEncoder().encode(problem) {
+                metadata["csp_json"] = String(data: json, encoding: .utf8) ?? ""
+            }
+
+            let summary = "Variables: \(problem.variables.joined(separator: ", "))\nDomain: \(problem.domain.joined(separator: ", "))\nConstraints: \(problem.constraints.count)"
+
+            let output = StageOutput(
+                stageKind: .analyze,
+                content: summary,
+                confidence: 0.9,
+                metadata: metadata
+            )
+
+            await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
+            return output
+
+        } catch {
+            // Fallback: mark as failed so Explain stage does direct LLM answer
+            let output = StageOutput(
+                stageKind: .analyze,
+                content: "Constraint extraction failed: \(error.localizedDescription)",
+                confidence: 0.1,
+                metadata: ["csp_valid": "false"]
+            )
+            await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
+            return output
         }
-
-        let output = StageOutput(
-            stageKind: .analyze,
-            content: raw,
-            confidence: parsed != nil ? 0.8 : 0.2,
-            metadata: metadata
-        )
-
-        await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
-        return output
-    }
-
-    static func parseCSP(from text: String) -> CSPProblem? {
-        // Find JSON object in the text
-        guard let start = text.firstIndex(of: "{"),
-              let end = text.lastIndex(of: "}") else { return nil }
-        let jsonString = String(text[start...end])
-        guard let data = jsonString.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(CSPProblem.self, from: data)
     }
 }

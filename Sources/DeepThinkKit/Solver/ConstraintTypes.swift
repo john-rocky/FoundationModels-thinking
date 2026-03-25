@@ -1,37 +1,40 @@
 import Foundation
+import FoundationModels
 
-// MARK: - Constraint Satisfaction Problem Types
+// MARK: - Constraint Satisfaction Problem Types (@Generable for structured LLM output)
 
+@available(iOS 26.0, macOS 26.0, *)
+@Generable
 public struct CSPProblem: Codable, Sendable {
-    public let variables: [String]
-    public let domain: [String]
-    public let constraints: [CSPConstraint]
-
-    public init(variables: [String], domain: [String], constraints: [CSPConstraint]) {
-        self.variables = variables
-        self.domain = domain
-        self.constraints = constraints
-    }
+    @Guide("Variable names, e.g. A, B, C, D, E")
+    public var variables: [String]
+    @Guide("Domain: position numbers as strings, e.g. 1, 2, 3, 4, 5")
+    public var domain: [String]
+    @Guide("Constraints extracted from the problem")
+    public var constraints: [CSPConstraint]
 }
 
+@available(iOS 26.0, macOS 26.0, *)
+@Generable
 public struct CSPConstraint: Codable, Sendable {
-    public let type: ConstraintType
-    public let args: [String]
-
-    public init(type: ConstraintType, args: [String]) {
-        self.type = type
-        self.args = args
-    }
+    @Guide("Type: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary")
+    public var type: String
+    @Guide("Arguments: variable names or position values")
+    public var args: [String]
 }
+
+// MARK: - Internal Constraint Type (for solver)
 
 public enum ConstraintType: String, Codable, Sendable {
-    case equal          // args: [variable, value] — variable must equal value
-    case notEqual       // args: [variable, value] — variable must not equal value
-    case notAdjacent    // args: [varA, varB] — |pos(A) - pos(B)| != 1
-    case lessThan       // args: [varA, varB] — pos(A) < pos(B)
-    case greaterThan    // args: [varA, varB] — pos(A) > pos(B)
-    case atBoundary     // args: [variable] — pos = 1 or pos = max
+    case equal
+    case notEqual
+    case notAdjacent
+    case lessThan
+    case greaterThan
+    case atBoundary
 }
+
+// MARK: - Solution
 
 public struct CSPSolution: Sendable {
     public let assignment: [String: String]
