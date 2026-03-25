@@ -6,20 +6,20 @@ import FoundationModels
 @available(iOS 26.0, macOS 26.0, *)
 @Generable
 public struct CSPProblem: Codable, Sendable {
-    @Guide("Variable names, e.g. A, B, C, D, E")
+    @Guide(description: "Variable names, e.g. A, B, C, D, E")
     public var variables: [String]
-    @Guide("Domain: position numbers as strings, e.g. 1, 2, 3, 4, 5")
+    @Guide(description: "Domain: position numbers as strings, e.g. 1, 2, 3, 4, 5")
     public var domain: [String]
-    @Guide("Constraints extracted from the problem")
+    @Guide(description: "Constraints extracted from the problem")
     public var constraints: [CSPConstraint]
 }
 
 @available(iOS 26.0, macOS 26.0, *)
 @Generable
 public struct CSPConstraint: Codable, Sendable {
-    @Guide("Type: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary")
+    @Guide(description: "Type: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary")
     public var type: String
-    @Guide("Arguments: variable names or position values")
+    @Guide(description: "Arguments: variable names or position values")
     public var args: [String]
 }
 
