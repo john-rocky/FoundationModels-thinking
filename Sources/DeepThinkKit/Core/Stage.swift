@@ -35,6 +35,15 @@ public func executeWithRetry(
             if let modelError = error as? ModelError {
                 switch modelError {
                 case .safetyFilterViolation:
+                    if attempt < stage.maxRetries {
+                        lastError = error
+                        await context.traceCollector.record(
+                            event: .retry(stage: stage.name, attempt: attempt, error: error)
+                        )
+                        await context.emit(.stageRetrying(stageName: stage.name, attempt: attempt))
+                        try await Task.sleep(for: .milliseconds(200 * attempt))
+                        continue
+                    }
                     throw StageError.contentFiltered(stage: stage.name)
                 case .contextTooLong:
                     // Retry without memory context to shorten the prompt
