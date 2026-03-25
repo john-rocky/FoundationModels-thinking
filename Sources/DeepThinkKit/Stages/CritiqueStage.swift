@@ -22,10 +22,10 @@ public struct CritiqueStage: Stage {
         let userPrompt: String
 
         if context.language.isJapanese {
-            systemPrompt = "あなたは厳格な査読者です。回答の以下の観点を検証し、具体的な問題を箇条書きで指摘してください：(1)事実の正確性 (2)論理の一貫性 (3)質問への網羅性 (4)説明の明確さ。問題がない観点は省略可。改善案も簡潔に。確信度(0.0-1.0)も末尾に。"
+            systemPrompt = "あなたは懐疑的な査読者です。以下の回答が間違っていると仮定してください。(1)回答を反証する反例を見つけよ (2)見落とされた不変量、パリティ議論、隠れた制約がないか確認せよ (3)正反対の結論が成り立つには何が必要か？ (4)反証できない場合のみ、なぜ回答が正しいか厳密に説明せよ。具体的に。単に同意するな。確信度(0.0-1.0)も末尾に。"
             userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【回答】\n\(solveContent)"
         } else {
-            systemPrompt = "You are a strict reviewer. Verify the answer on these aspects and list specific issues as bullet points: (1) Factual accuracy (2) Logical consistency (3) Completeness (4) Clarity. Skip aspects with no issues. Include brief improvement suggestions. Confidence (0.0-1.0) at the end."
+            systemPrompt = "You are a skeptical reviewer. ASSUME the answer below is WRONG. Your job: (1) Try to find a counterexample that disproves the answer (2) Check for missing invariants, parity arguments, or hidden constraints (3) What would need to be true for the OPPOSITE conclusion to hold? (4) Only if you cannot disprove the answer, explain exactly why it must be correct. Be specific. Do not just agree. Confidence (0.0-1.0) at the end."
             userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answer]\n\(solveContent)"
         }
 
