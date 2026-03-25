@@ -15,30 +15,22 @@ public struct ExtractConstraintsStage: Stage {
         )
 
         let systemPrompt: String
+        let schema = """
+        {"variables":["A","B","C"],"domain":["1","2","3"],"constraints":[{"type":"equal","args":["B","2"]},{"type":"notAdjacent","args":["A","C"]},{"type":"greaterThan","args":["C","A"]},{"type":"atBoundary","args":["A"]}]}
+        """
+
         if context.language.isJapanese {
-            systemPrompt = """
-            問題文から制約を抽出し、以下のJSON形式で出力してください。JSON以外は出力しないこと。
-
-            {"variables":["A","B","C"],"domain":["1","2","3"],"constraints":[{"type":"equal","args":["B","2"]},{"type":"notAdjacent","args":["A","B"]},{"type":"greaterThan","args":["C","A"]},{"type":"atBoundary","args":["A"]}]}
-
-            type: equal(変数=値), notEqual(変数≠値), notAdjacent(隣接不可), lessThan(左), greaterThan(右), atBoundary(端)
-            domain: 位置番号を文字列で(例:["1","2","3","4","5"])
-            """
+            systemPrompt = "JSONのみ出力。説明不要。形式:\n\(schema)\ntype: equal(=), notEqual(≠), notAdjacent(隣接不可), lessThan(<), greaterThan(>), atBoundary(端)"
         } else {
-            systemPrompt = """
-            Extract constraints from the problem and output ONLY JSON in this format:
-
-            {"variables":["A","B","C"],"domain":["1","2","3"],"constraints":[{"type":"equal","args":["B","2"]},{"type":"notAdjacent","args":["A","B"]},{"type":"greaterThan","args":["C","A"]},{"type":"atBoundary","args":["A"]}]}
-
-            type: equal(var=val), notEqual(var≠val), notAdjacent(not next to), lessThan(left of), greaterThan(right of), atBoundary(at end)
-            domain: position numbers as strings (e.g. ["1","2","3","4","5"])
-            """
+            systemPrompt = "Output ONLY JSON. No explanation. Format:\n\(schema)\ntype: equal(=), notEqual(≠), notAdjacent(not next to), lessThan(<), greaterThan(>), atBoundary(at end)"
         }
+
+        let userPrompt = "Convert to JSON:\n\(truncate(input.query, to: 600))"
 
         let raw = try await streamingGenerate(
             stageName: name,
             systemPrompt: systemPrompt,
-            userPrompt: truncate(input.query, to: 800),
+            userPrompt: userPrompt,
             context: context
         )
 
