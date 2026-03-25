@@ -18,6 +18,8 @@ public enum PipelineFactory {
             BranchMergePipeline(configuration: configuration)
         case .selfConsistency:
             SelfConsistencyPipeline(configuration: configuration)
+        case .verified:
+            VerifiedPipeline(configuration: configuration)
         }
     }
 }

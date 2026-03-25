@@ -267,6 +267,6 @@ final class ChatViewModel {
     }
 
     private func isFinalAnswerStage(_ name: String) -> Bool {
-        name == "Finalize" || name == "Direct"
+        name == "Finalize" || name == "Direct" || name == "Explain"
     }
 }

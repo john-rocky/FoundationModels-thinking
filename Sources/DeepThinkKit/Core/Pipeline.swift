@@ -88,6 +88,7 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
     case critiqueLoop
     case branchMerge
     case selfConsistency
+    case verified
 
     public var id: String { rawValue }
 
@@ -98,6 +99,7 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
         case .critiqueLoop: "Critique Loop"
         case .branchMerge: "Branch & Merge"
         case .selfConsistency: "Self-Consistency"
+        case .verified: "Verified (CSP)"
         }
     }
 
@@ -113,6 +115,8 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
             "Analyze -> {Solve A, B, C} -> Merge -> Finalize"
         case .selfConsistency:
             "Analyze -> Multi-Solve -> Aggregate -> Finalize"
+        case .verified:
+            "Extract Constraints -> Solve (deterministic) -> Explain"
         }
     }
 
