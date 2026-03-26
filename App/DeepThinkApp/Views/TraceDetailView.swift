@@ -125,6 +125,7 @@ struct StageTraceRow: View {
         case .aggregate: .pink
         case .custom: .gray
         case .webSearch: .blue
+        case .think: .indigo
         }
     }
 }
