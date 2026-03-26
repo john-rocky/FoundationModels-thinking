@@ -20,9 +20,15 @@ func streamingGenerate(
         systemPrompt: systemPrompt,
         userPrompt: userPrompt
     )
-    for try await partial in stream {
-        finalContent = partial
-        await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+    do {
+        for try await partial in stream {
+            finalContent = partial
+            await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+        }
+    } catch {
+        // If the safety filter fires mid-stream, keep the partial content
+        if !finalContent.isEmpty { return finalContent }
+        throw error
     }
     return finalContent
 }
@@ -38,10 +44,15 @@ func streamingSessionGenerate(
     context: PipelineContext
 ) async throws -> String {
     var finalContent = ""
-    let stream = try await session.streamResponse(to: prompt)
-    for try await partial in stream {
-        finalContent = partial
-        await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+    do {
+        let stream = try await session.streamResponse(to: prompt)
+        for try await partial in stream {
+            finalContent = partial
+            await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+        }
+    } catch {
+        if !finalContent.isEmpty { return finalContent }
+        throw error
     }
     return finalContent
 }
