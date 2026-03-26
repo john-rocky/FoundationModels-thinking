@@ -58,10 +58,11 @@ public struct DirectPipeline: Pipeline, Sendable {
                 userPrompt += formatMemoryContext(memory)
             }
             userPrompt += webSearchContent
-            let directSystemPrompt = localizedFinalAnswerSystemPrompt(
+            let directSystemPrompt = localizedSystemPrompt(
                 "Think carefully, then answer clearly and completely.",
                 language: context.language
             )
+            userPrompt += markdownSuffix
             do {
                 raw = try await streamingGenerate(
                     stageName: "Direct",

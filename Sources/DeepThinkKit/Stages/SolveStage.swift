@@ -19,13 +19,14 @@ public struct SolveStage: Stage {
         let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
         let plan = input.previousOutputs["Plan"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = localizedFinalAnswerSystemPrompt(
+        let systemPrompt = localizedSystemPrompt(
             "Generate an answer following the analysis and plan below.",
             language: context.language
         )
         var userPrompt = "Question: \(truncate(input.query, to: 500))"
         if !analysis.isEmpty { userPrompt += "\n\n[Analysis]\n\(analysis)" }
         if !plan.isEmpty { userPrompt += "\n\n[Plan]\n\(plan)" }
+        userPrompt += markdownSuffix
 
         let raw = try await streamingGenerate(
             stageName: name,

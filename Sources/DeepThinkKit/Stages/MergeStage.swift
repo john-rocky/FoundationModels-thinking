@@ -20,11 +20,11 @@ public struct MergeStage: Stage {
             .map { "[\($0.key)] \(summarizeForNextStage($0.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = localizedFinalAnswerSystemPrompt(
+        let systemPrompt = localizedSystemPrompt(
             "Select the best parts from each answer and integrate into one.",
             language: context.language
         )
-        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)" + markdownSuffix
 
         let raw = try await streamingGenerate(
             stageName: name,
@@ -63,11 +63,11 @@ public struct AggregateStage: Stage {
             .map { "[\($0.offset + 1)] \(summarizeForNextStage($0.element.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = localizedFinalAnswerSystemPrompt(
+        let systemPrompt = localizedSystemPrompt(
             "Compare the answers. Trust majority consensus and output the final answer.",
             language: context.language
         )
-        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)" + markdownSuffix
 
         let raw = try await streamingGenerate(
             stageName: name,

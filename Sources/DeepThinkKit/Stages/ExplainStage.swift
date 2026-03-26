@@ -19,14 +19,14 @@ public struct ExplainStage: Stage {
 
         // If solver failed, fall back to direct LLM answer
         if solverStatus == "parse_failed" {
-            let fallbackPrompt = localizedFinalAnswerSystemPrompt(
+            let fallbackPrompt = localizedSystemPrompt(
                 "Answer the question directly.",
                 language: context.language
             )
             let raw = try await streamingGenerate(
                 stageName: name,
                 systemPrompt: fallbackPrompt,
-                userPrompt: truncate(input.query, to: 600),
+                userPrompt: truncate(input.query, to: 600) + markdownSuffix,
                 context: context
             )
             let output = parseOutput(raw: raw, kind: .finalize)
@@ -35,11 +35,11 @@ public struct ExplainStage: Stage {
         }
 
         let solutionText = solveOutput?.content ?? ""
-        let systemPrompt = localizedFinalAnswerSystemPrompt(
+        let systemPrompt = localizedSystemPrompt(
             "Explain the verified solution clearly to answer the original problem.",
             language: context.language
         )
-        let userPrompt = "Problem: \(truncate(input.query, to: 400))\n\n[Verified Solution]\n\(solutionText)"
+        let userPrompt = "Problem: \(truncate(input.query, to: 400))\n\n[Verified Solution]\n\(solutionText)" + markdownSuffix
 
         let raw = try await streamingGenerate(
             stageName: name,
