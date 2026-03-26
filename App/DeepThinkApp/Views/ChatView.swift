@@ -6,66 +6,9 @@ struct ChatView: View {
     @State private var showPipelineSelector = false
 
     var body: some View {
-        @Bindable var vm = viewModel
-
         VStack(spacing: 0) {
-            // Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if let conversation = viewModel.currentConversation {
-                            ForEach(conversation.messages) { message in
-                                MessageBubbleView(message: message)
-                                    .id(message.id)
-                            }
-                        } else {
-                            WelcomeView()
-                        }
-
-                        if viewModel.isProcessing {
-                            ThinkingStreamView()
-                                .id("thinking")
-                        }
-
-                        StreamingAnswerBubble(content: viewModel.streamingAnswerContent)
-                            .id("streaming-answer")
-                    }
-                    .padding()
-                }
-                .onChange(of: viewModel.currentConversation?.messages.count) {
-                    if let lastId = viewModel.currentConversation?.messages.last?.id {
-                        withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
-                }
-                .onChange(of: viewModel.thinkingSteps.count) {
-                    if viewModel.isProcessing {
-                        withAnimation {
-                            proxy.scrollTo("thinking", anchor: .bottom)
-                        }
-                    }
-                }
-                .onChange(of: viewModel.currentStreamingContent.count / 50) {
-                    if viewModel.isProcessing {
-                        proxy.scrollTo("thinking", anchor: .bottom)
-                    }
-                }
-                .onChange(of: viewModel.streamingAnswerContent.count / 50) {
-                    if !viewModel.streamingAnswerContent.isEmpty {
-                        proxy.scrollTo("streaming-answer", anchor: .bottom)
-                    }
-                }
-                .onTapGesture {
-                    #if os(iOS)
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    #endif
-                }
-            }
-
+            messageScrollView
             Divider()
-
-            // Input Area
             InputBarView()
         }
         .navigationTitle(viewModel.currentConversation?.title ?? "DeepThink")
@@ -74,41 +17,7 @@ struct ChatView: View {
         #endif
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    // Pipeline selector
-                    Section("Pipeline") {
-                        ForEach(PipelineKind.allCases) { kind in
-                            Button {
-                                viewModel.selectedPipelineKind = kind
-                            } label: {
-                                Label(
-                                    kind.displayName,
-                                    systemImage: viewModel.selectedPipelineKind == kind
-                                        ? "checkmark.circle.fill"
-                                        : "circle"
-                                )
-                            }
-                        }
-                    }
-
-                    // Web Search toggle
-                    Section("Search") {
-                        Toggle(isOn: $vm.webSearchEnabled) {
-                            Label("Web Search", systemImage: "magnifyingglass")
-                        }
-                    }
-
-                } label: {
-                    if viewModel.selectedPipelineKind == .auto,
-                       let resolved = viewModel.resolvedPipelineKind {
-                        Label("Auto → \(resolved.displayName)", systemImage: "sparkles")
-                    } else {
-                        Label(
-                            viewModel.selectedPipelineKind.displayName,
-                            systemImage: viewModel.selectedPipelineKind == .auto ? "sparkles" : "gearshape"
-                        )
-                    }
-                }
+                pipelineMenu
             }
 
             #if os(iOS)
@@ -120,6 +29,102 @@ struct ChatView: View {
                 }
             }
             #endif
+        }
+    }
+
+    private var messageScrollView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    if let conversation = viewModel.currentConversation {
+                        ForEach(conversation.messages) { message in
+                            MessageBubbleView(message: message)
+                                .id(message.id)
+                        }
+                    } else {
+                        WelcomeView()
+                    }
+
+                    if viewModel.isProcessing {
+                        ThinkingStreamView()
+                            .id("thinking")
+                    }
+
+                    StreamingAnswerBubble(content: viewModel.streamingAnswerContent)
+                        .id("streaming-answer")
+                }
+                .padding()
+            }
+            .onChange(of: viewModel.currentConversation?.messages.count) {
+                if let lastId = viewModel.currentConversation?.messages.last?.id {
+                    withAnimation {
+                        proxy.scrollTo(lastId, anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: viewModel.thinkingSteps.count) {
+                if viewModel.isProcessing {
+                    withAnimation {
+                        proxy.scrollTo("thinking", anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: viewModel.currentStreamingContent.count / 50) {
+                if viewModel.isProcessing {
+                    proxy.scrollTo("thinking", anchor: .bottom)
+                }
+            }
+            .onChange(of: viewModel.streamingAnswerContent.count / 50) {
+                if !viewModel.streamingAnswerContent.isEmpty {
+                    proxy.scrollTo("streaming-answer", anchor: .bottom)
+                }
+            }
+            .onTapGesture {
+                #if os(iOS)
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                #endif
+            }
+        }
+    }
+
+    private var pipelineMenu: some View {
+        @Bindable var vm = viewModel
+        return Menu {
+            Section("Pipeline") {
+                ForEach(PipelineKind.allCases) { kind in
+                    Button {
+                        viewModel.selectedPipelineKind = kind
+                    } label: {
+                        Label(
+                            kind.displayName,
+                            systemImage: viewModel.selectedPipelineKind == kind
+                                ? "checkmark.circle.fill"
+                                : "circle"
+                        )
+                    }
+                }
+            }
+
+            Section("Search") {
+                Toggle(isOn: $vm.webSearchEnabled) {
+                    Label("Web Search", systemImage: "magnifyingglass")
+                }
+            }
+        } label: {
+            pipelineMenuLabel
+        }
+    }
+
+    @ViewBuilder
+    private var pipelineMenuLabel: some View {
+        if viewModel.selectedPipelineKind == .auto,
+           let resolved = viewModel.resolvedPipelineKind {
+            Label("Auto → \(resolved.displayName)", systemImage: "sparkles")
+        } else {
+            Label(
+                viewModel.selectedPipelineKind.displayName,
+                systemImage: viewModel.selectedPipelineKind == .auto ? "sparkles" : "gearshape"
+            )
         }
     }
 }
