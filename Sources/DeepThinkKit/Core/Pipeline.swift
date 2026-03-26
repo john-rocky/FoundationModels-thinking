@@ -11,6 +11,7 @@ public struct PipelineConfiguration: Sendable, Codable {
     public var branchCount: Int
     public var webSearchEnabled: Bool
     public var maxSearchResults: Int
+    public var webSearchContextBudget: Int
 
     public init(
         maxStages: Int = 20,
@@ -20,7 +21,8 @@ public struct PipelineConfiguration: Sendable, Codable {
         confidenceThreshold: Double = 0.7,
         branchCount: Int = 3,
         webSearchEnabled: Bool = false,
-        maxSearchResults: Int = 5
+        maxSearchResults: Int = 5,
+        webSearchContextBudget: Int = 2000
     ) {
         self.maxStages = maxStages
         self.maxCritiqueReviseLoops = maxCritiqueReviseLoops
@@ -30,6 +32,7 @@ public struct PipelineConfiguration: Sendable, Codable {
         self.branchCount = branchCount
         self.webSearchEnabled = webSearchEnabled
         self.maxSearchResults = maxSearchResults
+        self.webSearchContextBudget = webSearchContextBudget
     }
 
     public static let `default` = PipelineConfiguration()

@@ -41,14 +41,17 @@ public struct BranchMergePipeline: Pipeline, Sendable {
 
         do {
             // Optional: Web Search
-            let _ = try await executeWebSearchIfEnabled(
+            var webSearchContext = ""
+            if let wsOutput = try await executeWebSearchIfEnabled(
                 query: query, context: context, configuration: configuration,
                 allOutputs: &allOutputs, stageIndex: &stageIndex
-            )
+            ), wsOutput.metadata["searchDecision"] == "searched" {
+                webSearchContext = "\n\n\(truncate(wsOutput.content, to: configuration.webSearchContextBudget))"
+            }
 
             // Stage: Analyze
             await context.emit(.stageStarted(stageName: "Analyze", stageKind: .analyze, index: stageIndex))
-            let analyzeInput = await context.buildInput(query: query)
+            let analyzeInput = await context.buildInput(query: query + webSearchContext)
             let analyzeOutput = try await executeWithRetry(
                 stage: AnalyzeStage(),
                 input: analyzeInput,

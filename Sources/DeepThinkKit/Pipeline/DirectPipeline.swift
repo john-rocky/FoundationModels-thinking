@@ -37,7 +37,7 @@ public struct DirectPipeline: Pipeline, Sendable {
                 await context.setOutput(searchOutput, for: "WebSearch")
                 await context.emit(.stageCompleted(stageName: stage.name, stageKind: .webSearch, output: searchOutput, index: 0))
                 if searchOutput.metadata["searchDecision"] == "searched" {
-                    webSearchContent = "\n\n[Web Search Results]\n\(truncate(searchOutput.content, to: 600))"
+                    webSearchContent = "\n\n\(truncate(searchOutput.content, to: configuration.webSearchContextBudget))"
                 }
             } catch {
                 await context.emit(.stageFailed(stageName: stage.name, error: "\(error)"))

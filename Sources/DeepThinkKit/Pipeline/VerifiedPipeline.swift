@@ -34,14 +34,17 @@ public struct VerifiedPipeline: Pipeline, Sendable {
 
         do {
             // Optional: Web Search
-            let _ = try await executeWebSearchIfEnabled(
+            var webSearchContext = ""
+            if let wsOutput = try await executeWebSearchIfEnabled(
                 query: query, context: context, configuration: configuration,
                 allOutputs: &allOutputs, stageIndex: &stageIndex
-            )
+            ), wsOutput.metadata["searchDecision"] == "searched" {
+                webSearchContext = "\n\n\(truncate(wsOutput.content, to: configuration.webSearchContextBudget))"
+            }
 
             // Stage: Extract constraints (LLM)
             await context.emit(.stageStarted(stageName: "Extract", stageKind: .analyze, index: stageIndex))
-            let extractInput = await context.buildInput(query: query)
+            let extractInput = await context.buildInput(query: query + webSearchContext)
             let extractOutput = try await executeWithRetry(
                 stage: ExtractConstraintsStage(),
                 input: extractInput,

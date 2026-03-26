@@ -6,11 +6,13 @@ public struct WebSearchResult: Sendable, Codable {
     public let title: String
     public let snippet: String
     public let url: String
+    public var pageContent: String?
 
-    public init(title: String, snippet: String, url: String) {
+    public init(title: String, snippet: String, url: String, pageContent: String? = nil) {
         self.title = title
         self.snippet = snippet
         self.url = url
+        self.pageContent = pageContent
     }
 }
 

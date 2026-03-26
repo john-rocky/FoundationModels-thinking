@@ -34,7 +34,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
                     allOutputs: &allOutputs, stageIndex: &stageIndex
                 )
                 if let ws = wsOutput, ws.metadata["searchDecision"] == "searched" {
-                    webSearchContext = "\n\n[Web Search Results]\n\(truncate(ws.content, to: 600))"
+                    webSearchContext = "\n\n\(truncate(ws.content, to: configuration.webSearchContextBudget))"
                 }
             }
 

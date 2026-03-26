@@ -232,7 +232,9 @@ final class ChatViewModel {
                     switch decision {
                     case "searched":
                         let count = output.metadata["resultCount"] ?? "0"
-                        thinkingSteps[idx] = ThinkingStep(stageName: "Web Search (\(count) results)", stageKind: .webSearch, index: thinkingSteps[idx].index)
+                        let pages = output.metadata["pagesFetched"] ?? "0"
+                        let label = pages != "0" ? "Web Search (\(count) results, \(pages) pages)" : "Web Search (\(count) results)"
+                        thinkingSteps[idx] = ThinkingStep(stageName: label, stageKind: .webSearch, index: thinkingSteps[idx].index)
                         thinkingSteps[idx].status = .completed
                         thinkingSteps[idx].output = output
                     case "failed":
@@ -306,6 +308,15 @@ final class ChatViewModel {
                     index: thinkingSteps[idx].index
                 )
             }
+
+        case .webPageFetchStarted(let count):
+            currentStreamingContent = "Fetching \(count) pages..."
+
+        case .webPageFetchCompleted(let successCount):
+            currentStreamingContent = "Fetched \(successCount) pages"
+
+        case .webContentExtracting:
+            currentStreamingContent = "Extracting key information..."
 
         case .pipelineCompleted, .pipelineFailed:
             break

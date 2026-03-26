@@ -48,6 +48,15 @@ public enum PipelineEvent: Sendable {
 
     /// Web search skipped (LLM decided it's not needed)
     case webSearchSkipped(reason: String)
+
+    /// Page content fetching started
+    case webPageFetchStarted(count: Int)
+
+    /// Page content fetching completed
+    case webPageFetchCompleted(successCount: Int)
+
+    /// LLM is extracting core information from fetched pages
+    case webContentExtracting
 }
 
 public typealias PipelineEventStream = AsyncStream<PipelineEvent>
