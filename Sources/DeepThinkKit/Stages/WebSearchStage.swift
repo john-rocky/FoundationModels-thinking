@@ -29,11 +29,11 @@ public struct WebSearchStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        // Step 1: Generate a search query from the user's question
-        let searchQuery = try await generateSearchQuery(query: input.query, context: context)
+        // Step 1: Extract search keywords from query via LLM
+        let keywords = try await extractKeywords(query: input.query, context: context)
 
-        guard !searchQuery.isEmpty else {
-            let reason = "Could not generate search query"
+        guard !keywords.isEmpty else {
+            let reason = "Could not extract search keywords"
             await context.emit(.webSearchSkipped(reason: reason))
 
             let output = StageOutput(
@@ -47,15 +47,15 @@ public struct WebSearchStage: Stage {
         }
 
         // Step 2: Execute web search
-        await context.emit(.webSearchStarted(keywords: searchQuery))
+        await context.emit(.webSearchStarted(keywords: keywords))
         await context.emit(.stageStreamingContent(
             stageName: name,
-            content: "Searching: \(searchQuery)"
+            content: "Searching: \(keywords)"
         ))
 
         let results: [WebSearchResult]
         do {
-            results = try await searchProvider.search(keywords: searchQuery, maxResults: maxResults)
+            results = try await searchProvider.search(keywords: keywords, maxResults: maxResults)
         } catch {
             let output = StageOutput(
                 stageKind: .webSearch,
@@ -73,7 +73,7 @@ public struct WebSearchStage: Stage {
                 stageKind: .webSearch,
                 content: "No search results found.",
                 confidence: 0.3,
-                metadata: ["searchDecision": "searched", "searchQuery": searchQuery, "resultCount": "0"]
+                metadata: ["searchDecision": "searched", "searchQuery": keywords, "resultCount": "0"]
             )
             await context.emit(.webSearchCompleted(resultCount: 0))
             await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
@@ -82,7 +82,7 @@ public struct WebSearchStage: Stage {
 
         await context.emit(.webSearchCompleted(resultCount: results.count))
 
-        // Step 3: Fetch actual page content from top results
+        // Step 3: Fetch actual page content from top results (parallel, best-effort)
         let fetchCount = min(results.count, maxPageFetchCount)
         await context.emit(.webPageFetchStarted(count: fetchCount))
         await context.emit(.stageStreamingContent(
@@ -115,26 +115,11 @@ public struct WebSearchStage: Stage {
         }
         await context.emit(.webPageFetchCompleted(successCount: successCount))
 
-        // Step 4: Extract core information using LLM
-        var coreInfo = ""
-        if successCount > 0 {
-            await context.emit(.webContentExtracting)
-            await context.emit(.stageStreamingContent(
-                stageName: name,
-                content: "Extracting key information..."
-            ))
-            coreInfo = await extractCoreInformation(
-                query: input.query,
-                results: enrichedResults,
-                context: context
-            )
-        }
-
-        // Step 5: Store results in context
+        // Step 4: Store results in context
         await context.setWebSearchResults(enrichedResults)
 
-        // Step 6: Format output
-        let formattedResults = formatSearchResults(results: enrichedResults, coreInfo: coreInfo)
+        // Step 5: Format results — page content directly enriches snippets (no extra LLM call)
+        let formattedResults = formatSearchResults(enrichedResults)
 
         await context.emit(.stageStreamingContent(stageName: name, content: formattedResults))
 
@@ -142,10 +127,10 @@ public struct WebSearchStage: Stage {
             stageKind: .webSearch,
             content: formattedResults,
             bulletPoints: enrichedResults.prefix(5).map { "[\($0.title)] \(String($0.snippet.prefix(80)))" },
-            confidence: 0.8,
+            confidence: results.isEmpty ? 0.3 : 0.8,
             metadata: [
                 "searchDecision": "searched",
-                "searchQuery": searchQuery,
+                "searchQuery": keywords,
                 "resultCount": "\(results.count)",
                 "pagesFetched": "\(successCount)"
             ]
@@ -157,12 +142,12 @@ public struct WebSearchStage: Stage {
         return output
     }
 
-    // MARK: - Search Query Generation
+    // MARK: - Keyword Extraction (restored original approach)
 
-    private func generateSearchQuery(query: String, context: PipelineContext) async throws -> String {
+    private func extractKeywords(query: String, context: PipelineContext) async throws -> String {
         let systemPrompt = """
-            Generate a short web search query (3-8 words) for the question below.
-            Capture the core intent. Output only the query, nothing else.
+            Extract 3-5 search keywords from the question for a web search.
+            Output only the keywords on a single line. No explanation needed.
             """
 
         let raw = try await context.modelProvider.generate(
@@ -176,60 +161,25 @@ public struct WebSearchStage: Stage {
             .trimmingCharacters(in: .whitespaces) ?? ""
     }
 
-    // MARK: - Core Information Extraction
-
-    private func extractCoreInformation(
-        query: String,
-        results: [WebSearchResult],
-        context: PipelineContext
-    ) async -> String {
-        let pagesWithContent = results.filter { $0.pageContent != nil && !$0.pageContent!.isEmpty }
-        guard !pagesWithContent.isEmpty else { return "" }
-
-        // Keep total page text small enough for on-device model context
-        let perPageBudget = 600
-        let pageTexts = pagesWithContent.prefix(2).enumerated().map { idx, result in
-            let content = String(result.pageContent!.prefix(perPageBudget))
-            return "[Page \(idx + 1): \(result.title)]\n\(content)"
-        }.joined(separator: "\n\n")
-
-        let systemPrompt = "Extract the key facts that answer the question from the web pages below. Be concise."
-
-        let userPrompt = "Question: \(truncate(query, to: 200))\n\n\(pageTexts)"
-
-        do {
-            let extracted = try await context.modelProvider.generate(
-                systemPrompt: systemPrompt,
-                userPrompt: userPrompt
-            )
-            let trimmed = extracted.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? "" : trimmed
-        } catch {
-            // Fall back gracefully — return empty and let snippets be used
-            return ""
-        }
-    }
-
     // MARK: - Formatting
 
-    private func formatSearchResults(results: [WebSearchResult], coreInfo: String) -> String {
+    /// Format results: if page content was fetched, use it to enrich the snippet.
+    /// No extra LLM call — the answering stage will interpret the richer content.
+    private func formatSearchResults(_ results: [WebSearchResult]) -> String {
         guard !results.isEmpty else {
             return "No search results found."
         }
-
-        if !coreInfo.isEmpty {
-            // Core info available: show extracted facts + compact source list
-            let sources = results.enumerated().map { idx, result in
-                "[\(idx + 1)] \(result.title) - \(result.url)"
-            }.joined(separator: "\n")
-            return "[Web Search Results]\n\n\(coreInfo)\n\n[Sources]\n\(sources)"
-        }
-
-        // Fallback: show full snippets (same format as before enhancement)
+        let header = "[Web Search Results]"
         let items = results.enumerated().map { idx, result in
-            "[\(idx + 1)] \(result.title)\n\(result.snippet)\nURL: \(result.url)"
+            var entry = "[\(idx + 1)] \(result.title)\n\(result.snippet)"
+            // Append page excerpt if available (richer than snippet alone)
+            if let page = result.pageContent, !page.isEmpty {
+                entry += "\n\(page)"
+            }
+            entry += "\nURL: \(result.url)"
+            return entry
         }.joined(separator: "\n\n")
-        return "[Web Search Results]\n\n\(items)"
+        return "\(header)\n\n\(items)"
     }
 }
 
