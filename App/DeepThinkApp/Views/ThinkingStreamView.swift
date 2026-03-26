@@ -90,7 +90,7 @@ struct ThinkingStreamView: View {
                                         .id("streamingBottom")
                                 }
                                 .frame(maxHeight: 200)
-                                .onChange(of: viewModel.currentStreamingContent) {
+                                .onChange(of: viewModel.currentStreamingContent.count / 50) {
                                     proxy.scrollTo("streamingBottom", anchor: .bottom)
                                 }
                             }

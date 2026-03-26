@@ -46,7 +46,7 @@ struct ChatView: View {
                         }
                     }
                 }
-                .onChange(of: viewModel.currentStreamingContent.count) {
+                .onChange(of: viewModel.currentStreamingContent.count / 50) {
                     if viewModel.isProcessing {
                         proxy.scrollTo("thinking", anchor: .bottom)
                     }

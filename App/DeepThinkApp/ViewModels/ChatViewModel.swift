@@ -233,9 +233,6 @@ final class ChatViewModel {
                 currentStreamingStageName = name
                 currentStreamingContent = content
             }
-            if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
-                thinkingSteps[idx].streamingContent = content
-            }
 
         case .stageCompleted(let name, let kind, let output, _):
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name && $0.output == nil }) {
