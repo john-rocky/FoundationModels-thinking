@@ -20,12 +20,10 @@ public struct ExtractConstraintsStage: Stage {
             throw StageError.modelUnavailable
         }
 
-        let instructions: String
-        if context.language.isJapanese {
-            instructions = "問題文から制約を抽出してください。変数名、位置のドメイン、制約の種類(equal,notEqual,notAdjacent,lessThan,greaterThan,atBoundary)を正確に。"
-        } else {
-            instructions = "Extract constraints from the problem. Use variable names, position domain, and constraint types: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary."
-        }
+        let instructions = localizedSystemPrompt(
+            "Extract constraints from the problem. Use variable names, position domain, and constraint types: equal, notEqual, notAdjacent, lessThan, greaterThan, atBoundary.",
+            language: context.language
+        )
 
         let session = LanguageModelSession(instructions: instructions)
 

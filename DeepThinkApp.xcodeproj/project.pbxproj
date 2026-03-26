@@ -35,6 +35,8 @@
 		ED590B50292E3D3C6A07B591 /* ComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5435C1394ED4198FA1DF123 /* ComparisonView.swift */; };
 		EF5C20798FDA2351E7609318 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DB201CEDF9706F17DD0AFD5B /* Assets.xcassets */; };
 		FB9289540C51D30644686050 /* DeepThinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = A1CD66ED5BF7BCB376993A26 /* DeepThinkKit */; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* MarkdownContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B4C5D6E7F8A9B0C1D2E3F4 /* MarkdownContentView.swift */; };
+		F1A2B3C4D5E6F7A8B9C0D1E3 /* MarkdownContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B4C5D6E7F8A9B0C1D2E3F4 /* MarkdownContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +49,7 @@
 		7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
 		8524592772958CE38A8AA70C /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
 		8B092D838C4C62EF7D2D7F31 /* FoundationModels-thinking */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "FoundationModels-thinking"; path = .; sourceTree = SOURCE_ROOT; };
+		A3B4C5D6E7F8A9B0C1D2E3F4 /* MarkdownContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownContentView.swift; sourceTree = "<group>"; };
 		93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		A0D2A4BEB799BD8869C45A49 /* TraceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceDetailView.swift; sourceTree = "<group>"; };
 		A7E23320083B638DBB522C9F /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
@@ -83,6 +86,7 @@
 				E5435C1394ED4198FA1DF123 /* ComparisonView.swift */,
 				0B3A95482E18033F73AE2735 /* ContentView.swift */,
 				B3830F8830D3C0AA2985F635 /* InputBarView.swift */,
+				A3B4C5D6E7F8A9B0C1D2E3F4 /* MarkdownContentView.swift */,
 				7642B142D29B9053CD2A3B42 /* MemoryBrowserView.swift */,
 				93E78F7204A4C48ADA243304 /* MessageBubbleView.swift */,
 				D0F3E524810566665DF42F75 /* PlatformHelpers.swift */,
@@ -252,6 +256,7 @@
 				4A34337B557ABD118DF16B7A /* Conversation.swift in Sources */,
 				CB914A9F45EA8E71C360248D /* DeepThinkApp.swift in Sources */,
 				233F014207DCAE8CE69BD4CB /* InputBarView.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* MarkdownContentView.swift in Sources */,
 				97D187224ACA84EF8C70DBE1 /* MemoryBrowserView.swift in Sources */,
 				2611D9E76F8E8D52F45E29E2 /* MessageBubbleView.swift in Sources */,
 				B72599AA81CDCD4DA354EB58 /* PlatformHelpers.swift in Sources */,
@@ -271,6 +276,7 @@
 				B713A5601E80B62AAADBE2AB /* Conversation.swift in Sources */,
 				7CFD1941D174183F3D26641B /* DeepThinkApp.swift in Sources */,
 				A6136DD6670C23E721A79DCF /* InputBarView.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E3 /* MarkdownContentView.swift in Sources */,
 				1F7A75E0EFC3BAFAC44EB976 /* MemoryBrowserView.swift in Sources */,
 				DDB28EDC929664FC693E27F0 /* MessageBubbleView.swift in Sources */,
 				D3ECFCF76A4D0B51DDC7EDCA /* PlatformHelpers.swift in Sources */,

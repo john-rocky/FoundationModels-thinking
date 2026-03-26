@@ -54,9 +54,7 @@ public struct WebSearchStage: Stage {
         } catch {
             let output = StageOutput(
                 stageKind: .webSearch,
-                content: context.language.isJapanese
-                    ? "Web search failed. Generating answer offline."
-                    : "Web search failed. Generating answer offline.",
+                content: "Web search failed. Generating answer offline.",
                 confidence: 0.3,
                 metadata: ["searchDecision": "failed", "error": "\(error)"]
             )
@@ -70,7 +68,7 @@ public struct WebSearchStage: Stage {
         await context.emit(.webSearchCompleted(resultCount: results.count))
 
         // Step 4: Format results as stage output
-        let formattedResults = formatSearchResults(results, language: context.language)
+        let formattedResults = formatSearchResults(results)
 
         await context.emit(.stageStreamingContent(stageName: name, content: formattedResults))
 
@@ -95,18 +93,10 @@ public struct WebSearchStage: Stage {
     // MARK: - Keyword Extraction
 
     private func extractKeywords(query: String, context: PipelineContext) async throws -> String {
-        let systemPrompt: String
-        if context.language.isJapanese {
-            systemPrompt = """
-            質問からウェブ検索用のキーワードを3〜5語で抽出してください。
-            キーワードのみを1行で出力してください。説明は不要です。
-            """
-        } else {
-            systemPrompt = """
+        let systemPrompt = """
             Extract 3-5 search keywords from the question for a web search.
             Output only the keywords on a single line. No explanation needed.
             """
-        }
 
         let raw = try await context.modelProvider.generate(
             systemPrompt: systemPrompt,
@@ -121,11 +111,11 @@ public struct WebSearchStage: Stage {
 
     // MARK: - Formatting
 
-    private func formatSearchResults(_ results: [WebSearchResult], language: AppLanguage) -> String {
+    private func formatSearchResults(_ results: [WebSearchResult]) -> String {
         guard !results.isEmpty else {
-            return language.isJapanese ? "No search results found." : "No search results found."
+            return "No search results found."
         }
-        let header = language.isJapanese ? "[Web Search Results]" : "[Web Search Results]"
+        let header = "[Web Search Results]"
         let items = results.enumerated().map { idx, result in
             "[\(idx + 1)] \(result.title)\n\(result.snippet)\nURL: \(result.url)"
         }.joined(separator: "\n\n")

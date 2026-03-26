@@ -42,7 +42,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
-                memoryContext = formatMemoryContext(memory, language: context.language)
+                memoryContext = formatMemoryContext(memory)
             }
 
             // Require multi-turn session support
@@ -51,9 +51,10 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
                 return try await direct.execute(query: query, context: context)
             }
 
-            let instructions = context.language.isJapanese
-                ? "あなたは慎重に回答し、自分の回答を見直すアシスタントです。"
-                : "You are an assistant that answers carefully and reviews your own work."
+            let instructions = localizedSystemPrompt(
+                "You are an assistant that answers carefully and reviews your own work.",
+                language: context.language
+            )
 
             let session = sessionProvider.createSession(instructions: instructions)
 
@@ -61,12 +62,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Solve", kind: .solve, input: query))
 
-            let solvePrompt: String
-            if context.language.isJapanese {
-                solvePrompt = "以下の質問に回答してください。\n\n質問: \(query)\(memoryContext)\(webSearchContext)"
-            } else {
-                solvePrompt = "Answer the following question.\n\nQuestion: \(query)\(memoryContext)\(webSearchContext)"
-            }
+            let solvePrompt = "Answer the following question.\n\nQuestion: \(query)\(memoryContext)\(webSearchContext)"
 
             let solveRaw = try await streamingSessionGenerate(
                 stageName: "Solve",
@@ -86,24 +82,13 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Critique", stageKind: .critique, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Critique", kind: .critique, input: ""))
 
-            let critiquePrompt: String
-            if context.language.isJapanese {
-                critiquePrompt = """
-                上記の回答を見直してください。
-                - 事実の誤りはないか？
-                - 論理の飛躍や見落としはないか？
-                - もっと良い説明方法はないか？
-                間違いや改善点があれば具体的に指摘してください。問題なければ「問題なし」と書いてください。
-                """
-            } else {
-                critiquePrompt = """
+            let critiquePrompt = """
                 Review your answer above.
                 - Are there any factual errors?
                 - Any logical gaps or oversights?
                 - Could the explanation be improved?
                 Point out specific issues if any. If the answer is correct, say "No issues found."
                 """
-            }
 
             let critiqueRaw = try await streamingSessionGenerate(
                 stageName: "Critique",
@@ -123,12 +108,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let finalPrompt: String
-            if context.language.isJapanese {
-                finalPrompt = "上記の見直しを踏まえて、最終回答を書いてください。修正が必要な箇所は修正し、問題ない箇所はそのまま維持してください。"
-            } else {
-                finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
-            }
+            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
 
             let finalRaw = try await streamingSessionGenerate(
                 stageName: "Finalize",

@@ -16,16 +16,11 @@ public struct PlanStage: Stage {
 
         let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt: String
-        let userPrompt: String
-
-        if context.language.isJapanese {
-            systemPrompt = "分析結果をもとに、回答の手順を箇条書きで設計してください。回答本文は書かないこと。"
-            userPrompt = "質問: \(truncate(input.query, to: 400))\n\n【分析結果】\n\(analysis)"
-        } else {
-            systemPrompt = "Based on the analysis, design answer steps as bullet points. Do not write the answer itself."
-            userPrompt = "Question: \(truncate(input.query, to: 400))\n\n[Analysis]\n\(analysis)"
-        }
+        let systemPrompt = localizedSystemPrompt(
+            "Based on the analysis, design answer steps as bullet points. Do not write the answer itself.",
+            language: context.language
+        )
+        let userPrompt = "Question: \(truncate(input.query, to: 400))\n\n[Analysis]\n\(analysis)"
 
         let raw = try await streamingGenerate(
             stageName: name,

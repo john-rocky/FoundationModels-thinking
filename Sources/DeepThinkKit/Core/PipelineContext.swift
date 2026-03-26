@@ -1,21 +1,79 @@
 import Foundation
+import NaturalLanguage
 
 // MARK: - App Language
 
 public enum AppLanguage: String, Codable, Sendable, CaseIterable, Identifiable {
     case english
     case japanese
+    case chinese
+    case korean
+    case spanish
+    case french
+    case german
+    case portuguese
+    case russian
+    case arabic
+    case italian
+    case hindi
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .english: "English"
-        case .japanese: "Japanese"
+        case .japanese: "日本語"
+        case .chinese: "中文"
+        case .korean: "한국어"
+        case .spanish: "Español"
+        case .french: "Français"
+        case .german: "Deutsch"
+        case .portuguese: "Português"
+        case .russian: "Русский"
+        case .arabic: "العربية"
+        case .italian: "Italiano"
+        case .hindi: "हिन्दी"
         }
     }
 
-    public var isJapanese: Bool { self == .japanese }
+    /// Directive appended to system prompts to enforce response language.
+    public var languageDirective: String {
+        switch self {
+        case .english: "You must respond in English."
+        case .japanese: "日本語で回答してください。"
+        case .chinese: "请用中文回答。"
+        case .korean: "한국어로 답변해 주세요."
+        case .spanish: "Responde en español."
+        case .french: "Réponds en français."
+        case .german: "Antworte auf Deutsch."
+        case .portuguese: "Responda em português."
+        case .russian: "Отвечай на русском языке."
+        case .arabic: "أجب باللغة العربية."
+        case .italian: "Rispondi in italiano."
+        case .hindi: "हिंदी में उत्तर दें।"
+        }
+    }
+
+    /// Detect language from input text using NaturalLanguage framework.
+    public static func detect(from text: String) -> AppLanguage {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let dominant = recognizer.dominantLanguage else { return .english }
+        switch dominant {
+        case .japanese: return .japanese
+        case .simplifiedChinese, .traditionalChinese: return .chinese
+        case .korean: return .korean
+        case .spanish: return .spanish
+        case .french: return .french
+        case .german: return .german
+        case .portuguese: return .portuguese
+        case .russian: return .russian
+        case .arabic: return .arabic
+        case .italian: return .italian
+        case .hindi: return .hindi
+        default: return .english
+        }
+    }
 }
 
 // MARK: - Pipeline Context

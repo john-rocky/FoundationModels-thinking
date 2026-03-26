@@ -72,13 +72,17 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
     )
 }
 
-func formatMemoryContext(_ entries: [MemoryEntry], language: AppLanguage = .japanese) -> String {
+/// Wrap a base system prompt with the language directive from context.
+func localizedSystemPrompt(_ base: String, language: AppLanguage) -> String {
+    "\(base)\n\(language.languageDirective)"
+}
+
+func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
     guard !entries.isEmpty else { return "" }
     let formatted = entries.prefix(2).map { entry in
         "- [\(entry.kind.rawValue)] \(truncate(entry.content, to: 100))"
     }.joined(separator: "\n")
-    let header = language.isJapanese ? "【参考メモリー】" : "[Reference Memory]"
-    return "\n\n\(header)\n\(formatted)"
+    return "\n\n[Reference Memory]\n\(formatted)"
 }
 
 /// Truncate text to a maximum character count, preserving word boundaries

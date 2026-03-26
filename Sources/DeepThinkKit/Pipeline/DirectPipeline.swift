@@ -55,12 +55,13 @@ public struct DirectPipeline: Pipeline, Sendable {
             let memory = await context.getRetrievedMemory()
             var userPrompt = query
             if !memory.isEmpty {
-                userPrompt += formatMemoryContext(memory, language: context.language)
+                userPrompt += formatMemoryContext(memory)
             }
             userPrompt += webSearchContent
-            let directSystemPrompt = context.language.isJapanese
-                ? "よく考えてから、明確かつ完全に回答してください。"
-                : "Think carefully, then answer clearly and completely."
+            let directSystemPrompt = localizedSystemPrompt(
+                "Think carefully, then answer clearly and completely.",
+                language: context.language
+            )
             do {
                 raw = try await streamingGenerate(
                     stageName: "Direct",

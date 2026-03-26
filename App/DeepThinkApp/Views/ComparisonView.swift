@@ -263,7 +263,7 @@ struct OutputDiffView: View {
                         }
                     }
 
-                    Text(entry.result?.finalOutput.content ?? "")
+                    MarkdownContentView(content: entry.result?.finalOutput.content ?? "")
                         .font(.callout)
                         .textSelection(.enabled)
                         .padding(10)
@@ -355,7 +355,7 @@ struct ComparisonRow: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Output:")
                             .font(.subheadline.bold())
-                        Text(result.finalOutput.content)
+                        MarkdownContentView(content: result.finalOutput.content)
                             .font(.callout)
                             .lineLimit(20)
                             .textSelection(.enabled)

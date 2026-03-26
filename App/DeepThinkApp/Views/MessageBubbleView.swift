@@ -11,8 +11,13 @@ struct MessageBubbleView: View {
                 if message.role == .user { Spacer(minLength: 60) }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(message.content)
-                        .textSelection(.enabled)
+                    if message.role == .assistant {
+                        MarkdownContentView(content: message.content)
+                            .textSelection(.enabled)
+                    } else {
+                        Text(message.content)
+                            .textSelection(.enabled)
+                    }
 
                     if let result = message.pipelineResult {
                         HStack(spacing: 12) {

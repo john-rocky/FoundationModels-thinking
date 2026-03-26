@@ -98,21 +98,6 @@ struct ChatView: View {
                         }
                     }
 
-                    // Language selector
-                    Section("Language") {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Button {
-                                viewModel.appLanguage = lang
-                            } label: {
-                                Label(
-                                    lang.displayName,
-                                    systemImage: viewModel.appLanguage == lang
-                                        ? "checkmark.circle.fill"
-                                        : "circle"
-                                )
-                            }
-                        }
-                    }
                 } label: {
                     Label(viewModel.selectedPipelineKind.displayName, systemImage: "gearshape")
                 }
@@ -193,7 +178,7 @@ struct StreamingAnswerBubble: View {
         } else {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(content)
+                    MarkdownContentView(content: content)
                         .textSelection(.enabled)
                         .padding(12)
                         .foregroundStyle(.primary)

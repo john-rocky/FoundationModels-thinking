@@ -20,16 +20,11 @@ public struct ReviseStage: Stage {
 
         let critiqueContent = input.previousOutputs["Critique"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt: String
-        let userPrompt: String
-
-        if context.language.isJapanese {
-            systemPrompt = "批評の指摘を修正し、改善した完全な回答を出力してください。"
-            userPrompt = "質問: \(truncate(input.query, to: 300))\n\n【現在の回答】\n\(solveContent)\n\n【批評・改善指示】\n\(critiqueContent)"
-        } else {
-            systemPrompt = "Fix the issues raised in the critique and output the complete improved answer."
-            userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Current Answer]\n\(solveContent)\n\n[Critique]\n\(critiqueContent)"
-        }
+        let systemPrompt = localizedSystemPrompt(
+            "Fix the issues raised in the critique and output the complete improved answer.",
+            language: context.language
+        )
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Current Answer]\n\(solveContent)\n\n[Critique]\n\(critiqueContent)"
 
         let raw = try await streamingGenerate(
             stageName: name,

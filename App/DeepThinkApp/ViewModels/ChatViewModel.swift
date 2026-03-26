@@ -114,9 +114,10 @@ final class ChatViewModel {
 
         do {
             let modelProvider = FoundationModelProvider()
+            let detectedLanguage = AppLanguage.detect(from: text)
             let context = PipelineContext(
                 modelProvider: modelProvider,
-                language: appLanguage,
+                language: detectedLanguage,
                 longTermMemory: longTermMemory
             )
 

@@ -14,16 +14,14 @@ public struct AnalyzeStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        let systemPrompt: String
-        if context.language.isJapanese {
-            systemPrompt = "質問を分解し、核心・前提・隠れた制約を箇条書きで。回答は書かないこと。"
-        } else {
-            systemPrompt = "Decompose the question. List the core problem, assumptions, and hidden constraints. Do not answer."
-        }
+        let systemPrompt = localizedSystemPrompt(
+            "Decompose the question. List the core problem, assumptions, and hidden constraints. Do not answer.",
+            language: context.language
+        )
 
         var userPrompt = truncate(input.query, to: 1000)
         if !input.memoryContext.isEmpty {
-            userPrompt += formatMemoryContext(input.memoryContext, language: context.language)
+            userPrompt += formatMemoryContext(input.memoryContext)
         }
 
         let raw = try await streamingGenerate(

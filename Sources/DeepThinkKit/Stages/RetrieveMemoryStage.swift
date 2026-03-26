@@ -38,9 +38,7 @@ public struct RetrieveMemoryStage: Stage {
 
         let content: String
         if entries.isEmpty {
-            content = context.language.isJapanese
-                ? "関連するメモリーは見つかりませんでした。"
-                : "No relevant memory found."
+            content = "No relevant memory found."
         } else {
             content = entries.enumerated().map { idx, entry in
                 "[\(idx + 1)] [\(entry.kind.rawValue)] \(entry.content)"

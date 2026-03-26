@@ -42,7 +42,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
-                memoryContext = formatMemoryContext(memory, language: context.language)
+                memoryContext = formatMemoryContext(memory)
             }
 
             // Require multi-turn session support
@@ -51,9 +51,10 @@ public struct SequentialPipeline: Pipeline, Sendable {
                 return try await direct.execute(query: query, context: context)
             }
 
-            let instructions = context.language.isJapanese
-                ? "あなたは丁寧に考えてから回答するアシスタントです。"
-                : "You are an assistant that thinks carefully before answering."
+            let instructions = localizedSystemPrompt(
+                "You are an assistant that thinks carefully before answering.",
+                language: context.language
+            )
 
             let session = sessionProvider.createSession(instructions: instructions)
 
@@ -61,20 +62,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Think", stageKind: .think, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Think", kind: .think, input: query))
 
-            let thinkPrompt: String
-            if context.language.isJapanese {
-                thinkPrompt = """
-                この質問について段階的に考えてください。
-                1. 何が問われているか明確にする
-                2. 重要な事実や条件を整理する
-                3. アプローチを考える
-                4. 見落としやすい点がないか確認する
-                考えた過程を書いてください。最終回答はまだ書かないでください。
-
-                質問: \(query)\(memoryContext)\(webSearchContext)
-                """
-            } else {
-                thinkPrompt = """
+            let thinkPrompt = """
                 Think through this question step by step:
                 1. Clarify what is being asked
                 2. Identify key facts and constraints
@@ -84,7 +72,6 @@ public struct SequentialPipeline: Pipeline, Sendable {
 
                 Question: \(query)\(memoryContext)\(webSearchContext)
                 """
-            }
 
             let thinkRaw = try await streamingSessionGenerate(
                 stageName: "Think",
@@ -104,9 +91,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let answerPrompt = context.language.isJapanese
-                ? "上記の考察を踏まえて、最終回答を書いてください。"
-                : "Based on your thinking above, write your final answer."
+            let answerPrompt = "Based on your thinking above, write your final answer."
 
             let answerRaw = try await streamingSessionGenerate(
                 stageName: "Finalize",

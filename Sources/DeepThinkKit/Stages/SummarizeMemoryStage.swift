@@ -19,9 +19,7 @@ public struct SummarizeMemoryStage: Stage {
         }.joined(separator: "\n")
 
         guard !memoryContent.isEmpty else {
-            let content = context.language.isJapanese
-                ? "要約対象のメモリーがありません。"
-                : "No memory to summarize."
+            let content = "No memory to summarize."
             let output = StageOutput(
                 stageKind: .summarizeMemory,
                 content: content,
@@ -31,16 +29,11 @@ public struct SummarizeMemoryStage: Stage {
             return output
         }
 
-        let systemPrompt: String
-        let userPrompt: String
-
-        if context.language.isJapanese {
-            systemPrompt = "メモリーを現在のタスクに関連する情報だけ残して簡潔に要約してください。箇条書きで。"
-            userPrompt = "タスク: \(truncate(input.query, to: 200))\n\nメモリー:\n\(memoryContent)"
-        } else {
-            systemPrompt = "Summarize the memory concisely, keeping only information relevant to the current task. Use bullet points."
-            userPrompt = "Task: \(truncate(input.query, to: 200))\n\nMemory:\n\(memoryContent)"
-        }
+        let systemPrompt = localizedSystemPrompt(
+            "Summarize the memory concisely, keeping only information relevant to the current task. Use bullet points.",
+            language: context.language
+        )
+        let userPrompt = "Task: \(truncate(input.query, to: 200))\n\nMemory:\n\(memoryContent)"
 
         let raw = try await streamingGenerate(
             stageName: name,
