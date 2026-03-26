@@ -101,6 +101,15 @@ enum PipelineLogger {
         case .webSearchSkipped(let reason):
             print("[WebSearch] Skipped: \(reason)")
 
+        case .webPageFetchStarted(let count):
+            print("[WebSearch] Fetching \(count) pages...")
+
+        case .webPageFetchCompleted(let successCount):
+            print("[WebSearch] Fetched \(successCount) pages")
+
+        case .webContentExtracting:
+            print("[WebSearch] Extracting core information...")
+
 }
         #endif
     }
