@@ -51,7 +51,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
                 return try await direct.execute(query: query, context: context)
             }
 
-            let instructions = localizedSystemPrompt(
+            let instructions = localizedFinalAnswerSystemPrompt(
                 "You are an assistant that answers carefully and reviews your own work.",
                 language: context.language
             )
@@ -108,7 +108,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct. Use Markdown formatting: headings (##), bold (**), lists, and code blocks where appropriate."
+            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
 
             let finalRaw = try await streamingSessionGenerate(
                 stageName: "Finalize",

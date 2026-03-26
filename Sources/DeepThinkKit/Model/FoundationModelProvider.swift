@@ -15,7 +15,8 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
 
         let session: LanguageModelSession
         if let systemPrompt, !systemPrompt.isEmpty {
-            session = LanguageModelSession(instructions: systemPrompt)
+            let sanitized = Self.sanitizeInstructions(systemPrompt)
+            session = LanguageModelSession(instructions: sanitized)
         } else {
             session = LanguageModelSession()
         }
@@ -44,7 +45,8 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
 
                 let session: LanguageModelSession
                 if let systemPrompt, !systemPrompt.isEmpty {
-                    session = LanguageModelSession(instructions: systemPrompt)
+                    let sanitized = Self.sanitizeInstructions(systemPrompt)
+                    session = LanguageModelSession(instructions: sanitized)
                 } else {
                     session = LanguageModelSession()
                 }
