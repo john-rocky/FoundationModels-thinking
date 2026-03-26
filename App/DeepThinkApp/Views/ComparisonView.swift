@@ -18,7 +18,7 @@ struct ComparisonView: View {
                     Text("Pipelines to compare:")
                         .font(.subheadline.bold())
 
-                    ForEach(PipelineKind.allCases) { kind in
+                    ForEach(PipelineKind.allCases.filter { $0 != .auto }) { kind in
                         Toggle(isOn: Binding(
                             get: { selectedPipelines.contains(kind) },
                             set: { isOn in

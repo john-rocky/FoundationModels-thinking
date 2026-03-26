@@ -92,6 +92,7 @@ public protocol Pipeline: Sendable {
 // MARK: - Pipeline Kind
 
 public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable {
+    case auto
     case direct
     case sequential
     case critiqueLoop
@@ -103,6 +104,7 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
 
     public var displayName: String {
         switch self {
+        case .auto: "Auto"
         case .direct: "Direct (Single-Pass)"
         case .sequential: "Sequential"
         case .critiqueLoop: "Critique Loop"
@@ -114,6 +116,8 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
 
     public var systemDescription: String {
         switch self {
+        case .auto:
+            "Automatically selects the best pipeline for your query"
         case .direct:
             "Query -> Response (no reasoning stages)"
         case .sequential:

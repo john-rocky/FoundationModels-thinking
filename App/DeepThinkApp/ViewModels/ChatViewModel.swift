@@ -13,6 +13,7 @@ final class ChatViewModel {
     var showTrace = false
     var showMemoryBrowser = false
     var errorMessage: String?
+    var resolvedPipelineKind: PipelineKind?
     var webSearchEnabled: Bool {
         didSet {
             UserDefaults.standard.set(webSearchEnabled, forKey: "webSearchEnabled")
@@ -110,6 +111,7 @@ final class ChatViewModel {
             currentStreamingContent = ""
             streamingAnswerContent = ""
             currentTask = nil
+            resolvedPipelineKind = nil
         }
 
         do {
@@ -132,8 +134,21 @@ final class ChatViewModel {
             let config = PipelineConfiguration(
                 webSearchEnabled: webSearchEnabled
             )
+
+            let effectiveKind: PipelineKind
+            if selectedPipelineKind == .auto {
+                effectiveKind = await PipelineClassifier.classify(
+                    query: text,
+                    using: modelProvider
+                )
+                resolvedPipelineKind = effectiveKind
+                await context.emit(.autoClassified(resolvedKind: effectiveKind))
+            } else {
+                effectiveKind = selectedPipelineKind
+            }
+
             let pipeline = PipelineFactory.create(
-                kind: selectedPipelineKind,
+                kind: effectiveKind,
                 configuration: config
             )
 
@@ -172,7 +187,7 @@ final class ChatViewModel {
                 let entry = MemoryEntry(
                     kind: .summary,
                     content: result.finalOutput.content,
-                    tags: ["auto-save", selectedPipelineKind.rawValue],
+                    tags: ["auto-save", (resolvedPipelineKind ?? selectedPipelineKind).rawValue],
                     source: "pipeline:\(pipeline.name)"
                 )
                 try? await longTermMemory.save(entry)
@@ -317,6 +332,10 @@ final class ChatViewModel {
 
         case .webContentExtracting:
             currentStreamingContent = "Extracting key information..."
+
+        case .autoClassified(let resolvedKind):
+            resolvedPipelineKind = resolvedKind
+            currentPipelineName = "Auto → \(resolvedKind.displayName)"
 
         case .pipelineCompleted, .pipelineFailed:
             break

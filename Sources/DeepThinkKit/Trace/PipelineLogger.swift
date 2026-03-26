@@ -110,6 +110,9 @@ enum PipelineLogger {
         case .webContentExtracting:
             print("[WebSearch] Extracting core information...")
 
+        case .autoClassified(let kind):
+            print("\n\(divider)")
+            print("[Auto] Selected: \(kind.displayName)")
 }
         #endif
     }

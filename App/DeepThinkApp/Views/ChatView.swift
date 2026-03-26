@@ -99,7 +99,15 @@ struct ChatView: View {
                     }
 
                 } label: {
-                    Label(viewModel.selectedPipelineKind.displayName, systemImage: "gearshape")
+                    if viewModel.selectedPipelineKind == .auto,
+                       let resolved = viewModel.resolvedPipelineKind {
+                        Label("Auto → \(resolved.displayName)", systemImage: "sparkles")
+                    } else {
+                        Label(
+                            viewModel.selectedPipelineKind.displayName,
+                            systemImage: viewModel.selectedPipelineKind == .auto ? "sparkles" : "gearshape"
+                        )
+                    }
                 }
             }
 

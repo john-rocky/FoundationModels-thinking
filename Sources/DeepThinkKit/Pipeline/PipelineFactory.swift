@@ -8,6 +8,8 @@ public enum PipelineFactory {
         configuration: PipelineConfiguration = .default
     ) -> any Pipeline {
         switch kind {
+        case .auto:
+            SequentialPipeline(configuration: configuration)
         case .direct:
             DirectPipeline(configuration: configuration)
         case .sequential:

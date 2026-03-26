@@ -57,6 +57,9 @@ public enum PipelineEvent: Sendable {
 
     /// LLM is extracting core information from fetched pages
     case webContentExtracting
+
+    /// Auto mode classified the query and selected a pipeline
+    case autoClassified(resolvedKind: PipelineKind)
 }
 
 public typealias PipelineEventStream = AsyncStream<PipelineEvent>
