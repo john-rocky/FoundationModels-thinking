@@ -6,13 +6,13 @@ import Foundation
 public struct WebPageFetcher: Sendable {
 
     private static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
-    private static let maxContentLength = 2000
+    private static let maxContentLength = 800
 
     public init() {}
 
     /// Fetch a web page and return its main text content.
     /// Returns an empty string on any failure (never throws).
-    public func fetchPageContent(url: String, timeout: TimeInterval = 8) async -> String {
+    public func fetchPageContent(url: String, timeout: TimeInterval = 5) async -> String {
         guard let pageURL = URL(string: url) else { return "" }
 
         var request = URLRequest(url: pageURL)

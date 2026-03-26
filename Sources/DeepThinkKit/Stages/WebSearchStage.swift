@@ -16,7 +16,7 @@ public struct WebSearchStage: Stage {
     public init(
         searchProvider: any WebSearchProvider = DuckDuckGoSearchProvider(),
         maxResults: Int = 5,
-        maxPageFetchCount: Int = 3
+        maxPageFetchCount: Int = 2
     ) {
         self.searchProvider = searchProvider
         self.maxResults = maxResults
@@ -161,9 +161,8 @@ public struct WebSearchStage: Stage {
 
     private func generateSearchQuery(query: String, context: PipelineContext) async throws -> String {
         let systemPrompt = """
-            Generate a concise web search query for the following question.
-            The query should capture the core intent, not just individual keywords.
-            Output only the search query on a single line. No explanation.
+            Generate a short web search query (3-8 words) for the question below.
+            Capture the core intent. Output only the query, nothing else.
             """
 
         let raw = try await context.modelProvider.generate(
@@ -187,22 +186,16 @@ public struct WebSearchStage: Stage {
         let pagesWithContent = results.filter { $0.pageContent != nil && !$0.pageContent!.isEmpty }
         guard !pagesWithContent.isEmpty else { return "" }
 
-        let pageTexts = pagesWithContent.prefix(3).enumerated().map { idx, result in
-            let content = String(result.pageContent!.prefix(1500))
+        // Keep total page text small enough for on-device model context
+        let perPageBudget = 600
+        let pageTexts = pagesWithContent.prefix(2).enumerated().map { idx, result in
+            let content = String(result.pageContent!.prefix(perPageBudget))
             return "[Page \(idx + 1): \(result.title)]\n\(content)"
         }.joined(separator: "\n\n")
 
-        let systemPrompt = """
-            Based on the web page content below, extract the key facts and essential information \
-            that answer the question. Be concise and factual. Focus on the most important details. \
-            Output only the extracted information, no commentary.
-            """
+        let systemPrompt = "Extract the key facts that answer the question from the web pages below. Be concise."
 
-        let userPrompt = """
-            Question: \(truncate(query, to: 300))
-
-            \(pageTexts)
-            """
+        let userPrompt = "Question: \(truncate(query, to: 200))\n\n\(pageTexts)"
 
         do {
             let extracted = try await context.modelProvider.generate(
@@ -224,20 +217,19 @@ public struct WebSearchStage: Stage {
             return "No search results found."
         }
 
-        var sections: [String] = ["[Web Search Results]"]
-
-        // Core information from page content (most valuable)
         if !coreInfo.isEmpty {
-            sections.append("[Core Information]\n\(coreInfo)")
+            // Core info available: show extracted facts + compact source list
+            let sources = results.enumerated().map { idx, result in
+                "[\(idx + 1)] \(result.title) - \(result.url)"
+            }.joined(separator: "\n")
+            return "[Web Search Results]\n\n\(coreInfo)\n\n[Sources]\n\(sources)"
         }
 
-        // Source attribution
-        let sources = results.enumerated().map { idx, result in
+        // Fallback: show full snippets (same format as before enhancement)
+        let items = results.enumerated().map { idx, result in
             "[\(idx + 1)] \(result.title)\n\(result.snippet)\nURL: \(result.url)"
         }.joined(separator: "\n\n")
-        sections.append("[Sources]\n\(sources)")
-
-        return sections.joined(separator: "\n\n")
+        return "[Web Search Results]\n\n\(items)"
     }
 }
 
