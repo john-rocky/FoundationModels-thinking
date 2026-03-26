@@ -108,7 +108,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
+            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct. Use Markdown formatting: headings (##), bold (**), lists, and code blocks where appropriate."
 
             let finalRaw = try await streamingSessionGenerate(
                 stageName: "Finalize",

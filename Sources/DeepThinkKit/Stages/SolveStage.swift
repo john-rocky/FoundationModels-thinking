@@ -19,7 +19,7 @@ public struct SolveStage: Stage {
         let analysis = input.previousOutputs["Analyze"].map { summarizeForNextStage($0) } ?? ""
         let plan = input.previousOutputs["Plan"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = localizedSystemPrompt(
+        let systemPrompt = localizedFinalAnswerSystemPrompt(
             "Generate an answer following the analysis and plan below.",
             language: context.language
         )

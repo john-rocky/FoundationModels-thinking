@@ -20,7 +20,7 @@ public struct MergeStage: Stage {
             .map { "[\($0.key)] \(summarizeForNextStage($0.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = localizedSystemPrompt(
+        let systemPrompt = localizedFinalAnswerSystemPrompt(
             "Select the best parts from each answer and integrate into one.",
             language: context.language
         )
@@ -63,7 +63,7 @@ public struct AggregateStage: Stage {
             .map { "[\($0.offset + 1)] \(summarizeForNextStage($0.element.value))" }
             .joined(separator: "\n\n")
 
-        let systemPrompt = localizedSystemPrompt(
+        let systemPrompt = localizedFinalAnswerSystemPrompt(
             "Compare the answers. Trust majority consensus and output the final answer.",
             language: context.language
         )

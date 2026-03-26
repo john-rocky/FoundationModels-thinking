@@ -19,7 +19,7 @@ public struct ExplainStage: Stage {
 
         // If solver failed, fall back to direct LLM answer
         if solverStatus == "parse_failed" {
-            let fallbackPrompt = localizedSystemPrompt(
+            let fallbackPrompt = localizedFinalAnswerSystemPrompt(
                 "Answer the question directly.",
                 language: context.language
             )
@@ -35,7 +35,7 @@ public struct ExplainStage: Stage {
         }
 
         let solutionText = solveOutput?.content ?? ""
-        let systemPrompt = localizedSystemPrompt(
+        let systemPrompt = localizedFinalAnswerSystemPrompt(
             "Explain the verified solution clearly to answer the original problem.",
             language: context.language
         )

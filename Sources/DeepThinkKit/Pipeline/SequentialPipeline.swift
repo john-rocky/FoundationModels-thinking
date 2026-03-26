@@ -91,7 +91,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let answerPrompt = "Based on your thinking above, write your final answer."
+            let answerPrompt = "Based on your thinking above, write your final answer. Use Markdown formatting: headings (##), bold (**), lists, and code blocks where appropriate."
 
             let answerRaw = try await streamingSessionGenerate(
                 stageName: "Finalize",

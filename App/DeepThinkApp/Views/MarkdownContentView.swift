@@ -198,8 +198,12 @@ enum MarkdownParser {
 // MARK: - Inline Markdown Helper
 
 private func inlineMarkdown(_ text: String) -> AttributedString {
-    (try? AttributedString(
-        markdown: text,
+    // Escape bare angle brackets that can cause AttributedString markdown parsing to fail
+    let sanitized = text
+        .replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;")
+    return (try? AttributedString(
+        markdown: sanitized,
         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     )) ?? AttributedString(text)
 }
@@ -279,7 +283,7 @@ private struct MarkdownBlockView: View {
         switch level {
         case 1: .title2.bold()
         case 2: .title3.bold()
-        default: .headline
+        default: .headline.bold()
         }
     }
 }

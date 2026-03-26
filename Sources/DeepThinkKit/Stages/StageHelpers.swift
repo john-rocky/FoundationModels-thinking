@@ -77,6 +77,14 @@ func localizedSystemPrompt(_ base: String, language: AppLanguage) -> String {
     "\(base)\n\(language.languageDirective)"
 }
 
+private let markdownDirective = "Format your response with Markdown: use headings (##), bold (**), lists (- or 1.), and code blocks (```) where appropriate."
+
+/// Wrap a base system prompt with markdown formatting and the language directive.
+/// Use for stages whose output is displayed directly to the user.
+func localizedFinalAnswerSystemPrompt(_ base: String, language: AppLanguage) -> String {
+    "\(base)\n\(markdownDirective)\n\(language.languageDirective)"
+}
+
 func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
     guard !entries.isEmpty else { return "" }
     let formatted = entries.prefix(2).map { entry in

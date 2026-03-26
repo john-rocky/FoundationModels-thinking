@@ -20,7 +20,7 @@ public struct ReviseStage: Stage {
 
         let critiqueContent = input.previousOutputs["Critique"].map { summarizeForNextStage($0) } ?? ""
 
-        let systemPrompt = localizedSystemPrompt(
+        let systemPrompt = localizedFinalAnswerSystemPrompt(
             "Fix the issues raised in the critique and output the complete improved answer.",
             language: context.language
         )
