@@ -62,7 +62,6 @@ public struct DirectPipeline: Pipeline, Sendable {
                 "Think carefully, then answer clearly and completely.",
                 language: context.language
             )
-            userPrompt += markdownSuffix
             do {
                 raw = try await streamingGenerate(
                     stageName: "Direct",

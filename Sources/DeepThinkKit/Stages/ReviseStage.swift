@@ -24,7 +24,7 @@ public struct ReviseStage: Stage {
             "Fix the issues raised in the critique and output the complete improved answer.",
             language: context.language
         )
-        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Current Answer]\n\(solveContent)\n\n[Critique]\n\(critiqueContent)" + markdownSuffix
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Current Answer]\n\(solveContent)\n\n[Critique]\n\(critiqueContent)"
 
         let raw = try await streamingGenerate(
             stageName: name,

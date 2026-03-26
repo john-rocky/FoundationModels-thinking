@@ -24,8 +24,7 @@ public struct MergeStage: Stage {
             "Select the best parts from each answer and integrate into one.",
             language: context.language
         )
-        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)" + markdownSuffix
-
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
         let raw = try await streamingGenerate(
             stageName: name,
             systemPrompt: systemPrompt,
@@ -67,8 +66,7 @@ public struct AggregateStage: Stage {
             "Compare the answers. Trust majority consensus and output the final answer.",
             language: context.language
         )
-        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)" + markdownSuffix
-
+        let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
         let raw = try await streamingGenerate(
             stageName: name,
             systemPrompt: systemPrompt,

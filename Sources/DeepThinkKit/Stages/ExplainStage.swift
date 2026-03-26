@@ -26,7 +26,7 @@ public struct ExplainStage: Stage {
             let raw = try await streamingGenerate(
                 stageName: name,
                 systemPrompt: fallbackPrompt,
-                userPrompt: truncate(input.query, to: 600) + markdownSuffix,
+                userPrompt: truncate(input.query, to: 600),
                 context: context
             )
             let output = parseOutput(raw: raw, kind: .finalize)
@@ -39,7 +39,7 @@ public struct ExplainStage: Stage {
             "Explain the verified solution clearly to answer the original problem.",
             language: context.language
         )
-        let userPrompt = "Problem: \(truncate(input.query, to: 400))\n\n[Verified Solution]\n\(solutionText)" + markdownSuffix
+        let userPrompt = "Problem: \(truncate(input.query, to: 400))\n\n[Verified Solution]\n\(solutionText)"
 
         let raw = try await streamingGenerate(
             stageName: name,

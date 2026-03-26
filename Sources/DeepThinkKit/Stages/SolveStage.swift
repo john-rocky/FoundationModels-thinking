@@ -26,7 +26,6 @@ public struct SolveStage: Stage {
         var userPrompt = "Question: \(truncate(input.query, to: 500))"
         if !analysis.isEmpty { userPrompt += "\n\n[Analysis]\n\(analysis)" }
         if !plan.isEmpty { userPrompt += "\n\n[Plan]\n\(plan)" }
-        userPrompt += markdownSuffix
 
         let raw = try await streamingGenerate(
             stageName: name,

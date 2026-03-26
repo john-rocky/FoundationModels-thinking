@@ -77,9 +77,6 @@ func localizedSystemPrompt(_ base: String, language: AppLanguage) -> String {
     "\(base)\n\(language.languageDirective)"
 }
 
-/// Suffix appended to user prompts for stages whose output is displayed directly to the user.
-let markdownSuffix = "\n\nStructure your response with section headings, bold for key terms, and bullet lists."
-
 func formatMemoryContext(_ entries: [MemoryEntry]) -> String {
     guard !entries.isEmpty else { return "" }
     let formatted = entries.prefix(2).map { entry in
