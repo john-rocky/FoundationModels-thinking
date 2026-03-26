@@ -27,6 +27,25 @@ func streamingGenerate(
     return finalContent
 }
 
+// MARK: - Streaming Session Generate Helper
+
+/// Streams generation from an existing multi-turn ModelSession and emits partial content events.
+/// Returns the final accumulated text.
+func streamingSessionGenerate(
+    stageName: String,
+    prompt: String,
+    session: any ModelSession,
+    context: PipelineContext
+) async throws -> String {
+    var finalContent = ""
+    let stream = try await session.streamResponse(to: prompt)
+    for try await partial in stream {
+        finalContent = partial
+        await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
+    }
+    return finalContent
+}
+
 // MARK: - Stage Output Parser
 
 func parseOutput(raw: String, kind: StageKind) -> StageOutput {

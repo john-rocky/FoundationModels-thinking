@@ -58,10 +58,13 @@ public struct DirectPipeline: Pipeline, Sendable {
                 userPrompt += formatMemoryContext(memory, language: context.language)
             }
             userPrompt += webSearchContent
+            let directSystemPrompt = context.language.isJapanese
+                ? "よく考えてから、明確かつ完全に回答してください。"
+                : "Think carefully, then answer clearly and completely."
             do {
                 raw = try await streamingGenerate(
                     stageName: "Direct",
-                    systemPrompt: "Answer the question accurately and clearly.",
+                    systemPrompt: directSystemPrompt,
                     userPrompt: userPrompt,
                     context: context
                 )
@@ -69,7 +72,7 @@ public struct DirectPipeline: Pipeline, Sendable {
                 // Retry without memory context (keep web search results)
                 raw = try await streamingGenerate(
                     stageName: "Direct",
-                    systemPrompt: "Answer the question accurately and clearly.",
+                    systemPrompt: directSystemPrompt,
                     userPrompt: query + webSearchContent,
                     context: context
                 )

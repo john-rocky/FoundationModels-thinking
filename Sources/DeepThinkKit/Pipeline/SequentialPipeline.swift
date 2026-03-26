@@ -1,16 +1,14 @@
 import Foundation
 
 // MARK: - Sequential Pipeline
-// Analyze -> Plan -> Solve -> Finalize
+// Think (step-by-step) -> Answer (multi-turn session)
 
 public struct SequentialPipeline: Pipeline, Sendable {
     public let name = "Sequential"
-    public let description = "Analyze → Plan → Solve → Finalize sequential pipeline"
+    public let description = "Think step-by-step → Answer (multi-turn session)"
     public let configuration: PipelineConfiguration
 
-    public var stages: [any Stage] {
-        [AnalyzeStage(), PlanStage(), SolveStage(), FinalizeStage()]
-    }
+    public var stages: [any Stage] { [] }
 
     public init(configuration: PipelineConfiguration = .default) {
         self.configuration = configuration
@@ -18,45 +16,111 @@ public struct SequentialPipeline: Pipeline, Sendable {
 
     public func execute(query: String, context: PipelineContext) async throws -> PipelineResult {
         let startTime = Date.now
-        await context.traceCollector.setPipeline(
-            name: name,
-            executionId: context.executionId
-        )
-        await context.traceCollector.record(
-            event: .pipelineStarted(name: name, query: query)
-        )
+        await context.traceCollector.setPipeline(name: name, executionId: context.executionId)
+        await context.traceCollector.record(event: .pipelineStarted(name: name, query: query))
+
         let searchStageCount = configuration.webSearchEnabled ? 1 : 0
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: stages.count + searchStageCount))
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 2 + searchStageCount))
 
         var allOutputs: [StageOutput] = []
-        var stageOffset = 0
+        var stageIndex = 0
 
         do {
             // Optional: Web Search
-            let _ = try await executeWebSearchIfEnabled(
-                query: query, context: context, configuration: configuration,
-                allOutputs: &allOutputs, stageIndex: &stageOffset
+            var webSearchContext = ""
+            if configuration.webSearchEnabled {
+                let wsOutput = try await executeWebSearchIfEnabled(
+                    query: query, context: context, configuration: configuration,
+                    allOutputs: &allOutputs, stageIndex: &stageIndex
+                )
+                if let ws = wsOutput, ws.metadata["searchDecision"] == "searched" {
+                    webSearchContext = "\n\n[Web Search Results]\n\(truncate(ws.content, to: 600))"
+                }
+            }
+
+            // Build memory context
+            let memory = await context.getRetrievedMemory()
+            var memoryContext = ""
+            if !memory.isEmpty {
+                memoryContext = formatMemoryContext(memory, language: context.language)
+            }
+
+            // Require multi-turn session support
+            guard let sessionProvider = context.modelProvider as? ModelSessionProvider else {
+                let direct = DirectPipeline(configuration: configuration)
+                return try await direct.execute(query: query, context: context)
+            }
+
+            let instructions = context.language.isJapanese
+                ? "あなたは丁寧に考えてから回答するアシスタントです。"
+                : "You are an assistant that thinks carefully before answering."
+
+            let session = sessionProvider.createSession(instructions: instructions)
+
+            // --- Turn 1: Think ---
+            await context.emit(.stageStarted(stageName: "Think", stageKind: .think, index: stageIndex))
+            await context.traceCollector.record(event: .stageStarted(stage: "Think", kind: .think, input: query))
+
+            let thinkPrompt: String
+            if context.language.isJapanese {
+                thinkPrompt = """
+                この質問について段階的に考えてください。
+                1. 何が問われているか明確にする
+                2. 重要な事実や条件を整理する
+                3. アプローチを考える
+                4. 見落としやすい点がないか確認する
+                考えた過程を書いてください。最終回答はまだ書かないでください。
+
+                質問: \(query)\(memoryContext)\(webSearchContext)
+                """
+            } else {
+                thinkPrompt = """
+                Think through this question step by step:
+                1. Clarify what is being asked
+                2. Identify key facts and constraints
+                3. Consider your approach
+                4. Check for things easy to overlook
+                Write your thinking process. Do not write the final answer yet.
+
+                Question: \(query)\(memoryContext)\(webSearchContext)
+                """
+            }
+
+            let thinkRaw = try await streamingSessionGenerate(
+                stageName: "Think",
+                prompt: thinkPrompt,
+                session: session,
+                context: context
             )
 
-            for (index, stage) in stages.enumerated() {
-                guard index < configuration.maxStages else {
-                    break
-                }
+            let thinkOutput = parseOutput(raw: thinkRaw, kind: .think)
+            allOutputs.append(thinkOutput)
+            await context.setOutput(thinkOutput, for: "Think")
+            await context.traceCollector.record(event: .stageCompleted(stage: "Think", output: thinkOutput))
+            await context.emit(.stageCompleted(stageName: "Think", stageKind: .think, output: thinkOutput, index: stageIndex))
+            stageIndex += 1
 
-                let adjustedIndex = index + stageOffset
-                await context.emit(.stageStarted(stageName: stage.name, stageKind: stage.kind, index: adjustedIndex))
+            // --- Turn 2: Answer (session remembers full Think output) ---
+            await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
+            await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-                let input = await context.buildInput(query: query)
-                let output = try await executeWithRetry(
-                    stage: stage,
-                    input: input,
-                    context: context
-                )
+            let answerPrompt = context.language.isJapanese
+                ? "上記の考察を踏まえて、最終回答を書いてください。"
+                : "Based on your thinking above, write your final answer."
 
-                allOutputs.append(output)
-                await context.setOutput(output, for: stage.name)
-                await context.emit(.stageCompleted(stageName: stage.name, stageKind: stage.kind, output: output, index: adjustedIndex))
-            }
+            let answerRaw = try await streamingSessionGenerate(
+                stageName: "Finalize",
+                prompt: answerPrompt,
+                session: session,
+                context: context
+            )
+
+            let answerOutput = parseOutput(raw: answerRaw, kind: .finalize)
+            allOutputs.append(answerOutput)
+            await context.setOutput(answerOutput, for: "Finalize")
+            await context.traceCollector.record(event: .stageCompleted(stage: "Finalize", output: answerOutput))
+            await context.emit(.stageCompleted(stageName: "Finalize", stageKind: .finalize, output: answerOutput, index: stageIndex))
+
         } catch {
             await context.emit(.pipelineFailed(error: "\(error)"))
             await context.finishEventStream()
@@ -65,12 +129,8 @@ public struct SequentialPipeline: Pipeline, Sendable {
 
         let endTime = Date.now
         let trace = await context.traceCollector.allRecords()
-
         await context.traceCollector.record(
-            event: .pipelineCompleted(
-                name: name,
-                duration: endTime.timeIntervalSince(startTime)
-            )
+            event: .pipelineCompleted(name: name, duration: endTime.timeIntervalSince(startTime))
         )
 
         let result = PipelineResult(
@@ -85,7 +145,6 @@ public struct SequentialPipeline: Pipeline, Sendable {
 
         await context.emit(.pipelineCompleted(result: result))
         await context.finishEventStream()
-
         return result
     }
 }

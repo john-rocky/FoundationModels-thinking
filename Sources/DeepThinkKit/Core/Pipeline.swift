@@ -114,9 +114,9 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
         case .direct:
             "Query -> Response (no reasoning stages)"
         case .sequential:
-            "Analyze -> Plan -> Solve -> Finalize"
+            "Think step-by-step → Answer (multi-turn)"
         case .critiqueLoop:
-            "Analyze -> Solve -> Critique -> Revise -> Finalize"
+            "Answer → Review → Final (multi-turn)"
         case .branchMerge:
             "Analyze -> {Solve A, B, C} -> Merge -> Finalize"
         case .selfConsistency:

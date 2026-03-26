@@ -1,16 +1,14 @@
 import Foundation
 
 // MARK: - Critique Loop Pipeline
-// Analyze -> Solve -> (Critique -> Revise) x N -> Finalize
+// Answer -> Review -> Final Answer (multi-turn session)
 
 public struct CritiqueLoopPipeline: Pipeline, Sendable {
     public let name = "CritiqueLoop"
-    public let description = "Analyze → Solve → (Critique → Revise) x N → Finalize"
+    public let description = "Answer → Review → Final (multi-turn session)"
     public let configuration: PipelineConfiguration
 
-    public var stages: [any Stage] {
-        [AnalyzeStage(), SolveStage(), CritiqueStage(), ReviseStage(), FinalizeStage()]
-    }
+    public var stages: [any Stage] { [] }
 
     public init(configuration: PipelineConfiguration = .default) {
         self.configuration = configuration
@@ -18,165 +16,157 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
 
     public func execute(query: String, context: PipelineContext) async throws -> PipelineResult {
         let startTime = Date.now
-        await context.traceCollector.setPipeline(
-            name: name,
-            executionId: context.executionId
-        )
-        await context.traceCollector.record(
-            event: .pipelineStarted(name: name, query: query)
-        )
+        await context.traceCollector.setPipeline(name: name, executionId: context.executionId)
+        await context.traceCollector.record(event: .pipelineStarted(name: name, query: query))
 
-        // Stage count: Analyze + Solve + (Critique + Revise) * maxLoops + Finalize
         let searchStageCount = configuration.webSearchEnabled ? 1 : 0
-        let estimatedStageCount = 2 + configuration.maxCritiqueReviseLoops * 2 + 1 + searchStageCount
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: estimatedStageCount))
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 3 + searchStageCount))
 
         var allOutputs: [StageOutput] = []
         var stageIndex = 0
-        let checker = ConvergenceChecker(
-            policy: LoopPolicy(
-                maxIterations: configuration.maxCritiqueReviseLoops,
-                convergenceThreshold: configuration.convergenceThreshold,
-                confidenceTarget: configuration.confidenceThreshold
-            )
-        )
 
         do {
             // Optional: Web Search
-            let _ = try await executeWebSearchIfEnabled(
-                query: query, context: context, configuration: configuration,
-                allOutputs: &allOutputs, stageIndex: &stageIndex
-            )
+            var webSearchContext = ""
+            if configuration.webSearchEnabled {
+                let wsOutput = try await executeWebSearchIfEnabled(
+                    query: query, context: context, configuration: configuration,
+                    allOutputs: &allOutputs, stageIndex: &stageIndex
+                )
+                if let ws = wsOutput, ws.metadata["searchDecision"] == "searched" {
+                    webSearchContext = "\n\n[Web Search Results]\n\(truncate(ws.content, to: 600))"
+                }
+            }
 
-            // Stage: Analyze
-            await context.emit(.stageStarted(stageName: "Analyze", stageKind: .analyze, index: stageIndex))
-            let analyzeInput = await context.buildInput(query: query)
-            let analyzeOutput = try await executeWithRetry(
-                stage: AnalyzeStage(),
-                input: analyzeInput,
-                context: context
-            )
-            allOutputs.append(analyzeOutput)
-            await context.setOutput(analyzeOutput, for: "Analyze")
-            await context.emit(.stageCompleted(stageName: "Analyze", stageKind: .analyze, output: analyzeOutput, index: stageIndex))
-            stageIndex += 1
+            // Build memory context
+            let memory = await context.getRetrievedMemory()
+            var memoryContext = ""
+            if !memory.isEmpty {
+                memoryContext = formatMemoryContext(memory, language: context.language)
+            }
 
-            // Stage 2: Solve
+            // Require multi-turn session support
+            guard let sessionProvider = context.modelProvider as? ModelSessionProvider else {
+                let direct = DirectPipeline(configuration: configuration)
+                return try await direct.execute(query: query, context: context)
+            }
+
+            let instructions = context.language.isJapanese
+                ? "あなたは慎重に回答し、自分の回答を見直すアシスタントです。"
+                : "You are an assistant that answers carefully and reviews your own work."
+
+            let session = sessionProvider.createSession(instructions: instructions)
+
+            // --- Turn 1: Solve ---
             await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
-            let solveInput = await context.buildInput(query: query)
-            let solveOutput = try await executeWithRetry(
-                stage: SolveStage(),
-                input: solveInput,
+            await context.traceCollector.record(event: .stageStarted(stage: "Solve", kind: .solve, input: query))
+
+            let solvePrompt: String
+            if context.language.isJapanese {
+                solvePrompt = "以下の質問に回答してください。\n\n質問: \(query)\(memoryContext)\(webSearchContext)"
+            } else {
+                solvePrompt = "Answer the following question.\n\nQuestion: \(query)\(memoryContext)\(webSearchContext)"
+            }
+
+            let solveRaw = try await streamingSessionGenerate(
+                stageName: "Solve",
+                prompt: solvePrompt,
+                session: session,
                 context: context
             )
+
+            let solveOutput = parseOutput(raw: solveRaw, kind: .solve)
             allOutputs.append(solveOutput)
             await context.setOutput(solveOutput, for: "Solve")
+            await context.traceCollector.record(event: .stageCompleted(stage: "Solve", output: solveOutput))
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            // Stage 3: Critique -> Revise loop
-            var previousConfidence = solveOutput.confidence
-            var bestOutput = solveOutput
+            // --- Turn 2: Critique (session sees full Solve output) ---
+            await context.emit(.stageStarted(stageName: "Critique", stageKind: .critique, index: stageIndex))
+            await context.traceCollector.record(event: .stageStarted(stage: "Critique", kind: .critique, input: ""))
 
-            for iteration in 1...configuration.maxCritiqueReviseLoops {
-                await context.emit(.loopIterationStarted(iteration: iteration, maxIterations: configuration.maxCritiqueReviseLoops))
-
-                // Critique
-                await context.emit(.stageStarted(stageName: "Critique", stageKind: .critique, index: stageIndex))
-                let critiqueInput = await context.buildInput(query: query)
-                let critiqueOutput = try await executeWithRetry(
-                    stage: CritiqueStage(),
-                    input: critiqueInput,
-                    context: context
-                )
-                allOutputs.append(critiqueOutput)
-                await context.setOutput(critiqueOutput, for: "Critique")
-                await context.emit(.stageCompleted(stageName: "Critique", stageKind: .critique, output: critiqueOutput, index: stageIndex))
-                stageIndex += 1
-
-                // Revise
-                await context.emit(.stageStarted(stageName: "Revise", stageKind: .revise, index: stageIndex))
-                let reviseInput = await context.buildInput(query: query)
-                let reviseOutput = try await executeWithRetry(
-                    stage: ReviseStage(),
-                    input: reviseInput,
-                    context: context
-                )
-                allOutputs.append(reviseOutput)
-                await context.setOutput(reviseOutput, for: "Revise")
-                await context.emit(.stageCompleted(stageName: "Revise", stageKind: .revise, output: reviseOutput, index: stageIndex))
-                stageIndex += 1
-
-                let decision = checker.shouldContinue(
-                    iteration: iteration,
-                    previousConfidence: previousConfidence,
-                    currentConfidence: reviseOutput.confidence
-                )
-
-                await context.traceCollector.record(
-                    event: .loopDecision(stage: "CritiqueLoop", decision: decision)
-                )
-
-                if reviseOutput.confidence > bestOutput.confidence {
-                    bestOutput = reviseOutput
-                }
-
-                switch decision {
-                case .continue:
-                    previousConfidence = reviseOutput.confidence
-                    await context.setOutput(reviseOutput, for: "Solve")
-                case .stop(let reason):
-                    if reason == .degradation {
-                        await context.setOutput(bestOutput, for: "Revise")
-                    }
-                    let reasonStr = "\(reason)"
-                    await context.emit(.loopEnded(reason: reasonStr))
-                    break
-                }
-
-                if case .stop = decision { break }
+            let critiquePrompt: String
+            if context.language.isJapanese {
+                critiquePrompt = """
+                上記の回答を見直してください。
+                - 事実の誤りはないか？
+                - 論理の飛躍や見落としはないか？
+                - もっと良い説明方法はないか？
+                間違いや改善点があれば具体的に指摘してください。問題なければ「問題なし」と書いてください。
+                """
+            } else {
+                critiquePrompt = """
+                Review your answer above.
+                - Are there any factual errors?
+                - Any logical gaps or oversights?
+                - Could the explanation be improved?
+                Point out specific issues if any. If the answer is correct, say "No issues found."
+                """
             }
 
-            // Stage 4: Finalize
-            await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
-            let finalizeInput = await context.buildInput(query: query)
-            let finalizeOutput = try await executeWithRetry(
-                stage: FinalizeStage(),
-                input: finalizeInput,
+            let critiqueRaw = try await streamingSessionGenerate(
+                stageName: "Critique",
+                prompt: critiquePrompt,
+                session: session,
                 context: context
             )
-            allOutputs.append(finalizeOutput)
-            await context.emit(.stageCompleted(stageName: "Finalize", stageKind: .finalize, output: finalizeOutput, index: stageIndex))
 
-            let endTime = Date.now
-            let trace = await context.traceCollector.allRecords()
+            let critiqueOutput = parseOutput(raw: critiqueRaw, kind: .critique)
+            allOutputs.append(critiqueOutput)
+            await context.setOutput(critiqueOutput, for: "Critique")
+            await context.traceCollector.record(event: .stageCompleted(stage: "Critique", output: critiqueOutput))
+            await context.emit(.stageCompleted(stageName: "Critique", stageKind: .critique, output: critiqueOutput, index: stageIndex))
+            stageIndex += 1
 
-            await context.traceCollector.record(
-                event: .pipelineCompleted(
-                    name: name,
-                    duration: endTime.timeIntervalSince(startTime)
-                )
+            // --- Turn 3: Final Answer (session sees both Solve and Critique) ---
+            await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
+            await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
+
+            let finalPrompt: String
+            if context.language.isJapanese {
+                finalPrompt = "上記の見直しを踏まえて、最終回答を書いてください。修正が必要な箇所は修正し、問題ない箇所はそのまま維持してください。"
+            } else {
+                finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
+            }
+
+            let finalRaw = try await streamingSessionGenerate(
+                stageName: "Finalize",
+                prompt: finalPrompt,
+                session: session,
+                context: context
             )
 
-            let result = PipelineResult(
-                pipelineName: name,
-                query: query,
-                finalOutput: finalizeOutput,
-                stageOutputs: allOutputs,
-                trace: trace,
-                startTime: startTime,
-                endTime: endTime
-            )
-
-            await context.emit(.pipelineCompleted(result: result))
-            await context.finishEventStream()
-
-            return result
+            let finalOutput = parseOutput(raw: finalRaw, kind: .finalize)
+            allOutputs.append(finalOutput)
+            await context.setOutput(finalOutput, for: "Finalize")
+            await context.traceCollector.record(event: .stageCompleted(stage: "Finalize", output: finalOutput))
+            await context.emit(.stageCompleted(stageName: "Finalize", stageKind: .finalize, output: finalOutput, index: stageIndex))
 
         } catch {
             await context.emit(.pipelineFailed(error: "\(error)"))
             await context.finishEventStream()
             throw error
         }
+
+        let endTime = Date.now
+        let trace = await context.traceCollector.allRecords()
+        await context.traceCollector.record(
+            event: .pipelineCompleted(name: name, duration: endTime.timeIntervalSince(startTime))
+        )
+
+        let result = PipelineResult(
+            pipelineName: name,
+            query: query,
+            finalOutput: allOutputs.last ?? StageOutput(stageKind: .finalize, content: ""),
+            stageOutputs: allOutputs,
+            trace: trace,
+            startTime: startTime,
+            endTime: endTime
+        )
+
+        await context.emit(.pipelineCompleted(result: result))
+        await context.finishEventStream()
+        return result
     }
 }
