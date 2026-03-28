@@ -128,7 +128,43 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 context: context
             )
 
-            let verifyOutput = parseOutput(raw: verifyRaw, kind: .finalize)
+            let verifyAnswer = AnswerExtractor.extract(from: verifyRaw) ?? ""
+
+            // If Solve and Verify agree → done (2 calls)
+            // If they disagree → tiebreaker 3rd call (3 calls)
+            let finalRaw: String
+            let finalKind: StageKind
+            if !proposedAnswer.isEmpty && !verifyAnswer.isEmpty
+                && proposedAnswer.lowercased() == verifyAnswer.lowercased() {
+                // Agreement — use Verify output as-is
+                finalRaw = verifyRaw
+                finalKind = .finalize
+            } else if proposedAnswer.isEmpty || verifyAnswer.isEmpty {
+                finalRaw = verifyRaw
+                finalKind = .finalize
+            } else {
+                // Disagreement — tiebreaker
+                await context.emit(.stageStreamingContent(
+                    stageName: "Verify",
+                    content: "Solve: \(proposedAnswer) vs Verify: \(verifyAnswer) — running tiebreaker..."
+                ))
+
+                let tbSystem = localizedSystemPrompt(
+                    "You are a careful problem solver. Track state at each step. End with 'Answer: [value]'.",
+                    language: context.language
+                )
+                let tbPrompt = "Solve from scratch. Show state after each step.\n\nProblem: \(query)"
+
+                finalRaw = try await streamingGenerate(
+                    stageName: "Verify",
+                    systemPrompt: tbSystem,
+                    userPrompt: tbPrompt,
+                    context: context
+                )
+                finalKind = .finalize
+            }
+
+            let verifyOutput = parseOutput(raw: finalRaw, kind: finalKind)
             allOutputs.append(verifyOutput)
             await context.setOutput(verifyOutput, for: "Verify")
             await context.traceCollector.record(event: .stageCompleted(stage: "Verify", output: verifyOutput))
