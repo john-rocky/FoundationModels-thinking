@@ -28,9 +28,12 @@ public func executeWithRetry(
     var currentInput = input
 
     for attempt in 1...max(1, stage.maxRetries) {
+        try Task.checkCancellation()
         do {
             let output = try await stage.execute(input: currentInput, context: context)
             return output
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             if let modelError = error as? ModelError {
                 switch modelError {

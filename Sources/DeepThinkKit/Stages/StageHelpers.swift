@@ -29,6 +29,7 @@ func streamingGenerate(
     userPrompt: String,
     context: PipelineContext
 ) async throws -> String {
+    try Task.checkCancellation()
     var finalContent = ""
     let stream = context.modelProvider.generateStream(
         systemPrompt: systemPrompt,
@@ -39,6 +40,9 @@ func streamingGenerate(
             finalContent = partial
             await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
         }
+    } catch is CancellationError {
+        if !finalContent.isEmpty { return finalContent }
+        throw CancellationError()
     } catch {
         // If the safety filter fires mid-stream, keep the partial content
         if !finalContent.isEmpty { return finalContent }
@@ -57,6 +61,7 @@ func streamingSessionGenerate(
     session: any ModelSession,
     context: PipelineContext
 ) async throws -> String {
+    try Task.checkCancellation()
     var finalContent = ""
     do {
         let stream = try await session.streamResponse(to: prompt)
@@ -64,6 +69,9 @@ func streamingSessionGenerate(
             finalContent = partial
             await context.emit(.stageStreamingContent(stageName: stageName, content: partial))
         }
+    } catch is CancellationError {
+        if !finalContent.isEmpty { return finalContent }
+        throw CancellationError()
     } catch {
         if !finalContent.isEmpty { return finalContent }
         throw error
