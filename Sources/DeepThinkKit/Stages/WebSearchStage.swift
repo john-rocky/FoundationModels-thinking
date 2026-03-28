@@ -144,25 +144,47 @@ public struct WebSearchStage: Stage {
 
     // MARK: - Keyword Extraction
 
-    /// Extract search keywords without LLM — simple heuristic approach.
-    /// LLM extraction was unreliable (returned full sentences instead of keywords).
     private func extractKeywords(query: String, context: PipelineContext) async throws -> String {
-        // Strip common question patterns to get the core topic
-        var q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let removePatterns = [
-            "について教えて", "とは何ですか", "とは", "って何", "を教えて",
-            "について", "はどういう", "ですか？", "ですか",
-            "what is ", "who is ", "tell me about ", "how to ",
-            "explain ", "what are ", "?", "？", "。", ".",
-        ]
-        for pattern in removePatterns {
-            q = q.replacingOccurrences(of: pattern, with: " ")
+        // Try LLM extraction first
+        let systemPrompt = """
+            Extract 3-5 search keywords from the question for a web search.
+            Output only the keywords on a single line. No explanation needed.
+            """
+        let raw = try await context.modelProvider.generate(
+            systemPrompt: systemPrompt,
+            userPrompt: truncate(query, to: 500)
+        )
+        let firstLine = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+
+        // Validate: if LLM returned a sentence instead of keywords, fall back
+        let looksLikeSentence = firstLine.count > 80
+            || firstLine.lowercased().hasPrefix("here ")
+            || firstLine.lowercased().hasPrefix("the ")
+            || firstLine.lowercased().hasPrefix("based on")
+            || firstLine.contains("keywords")
+        if looksLikeSentence || firstLine.isEmpty {
+            return heuristicKeywords(from: query)
         }
-        // Collapse whitespace and return as search query
-        let keywords = q.components(separatedBy: .whitespacesAndNewlines)
+        return firstLine
+    }
+
+    /// Fallback: strip question patterns and use core text as search query.
+    private func heuristicKeywords(from query: String) -> String {
+        var q = query
+        for p in ["について教えて", "とは何ですか", "とは", "って何", "を教えて",
+                   "について", "ですか？", "ですか", "は？",
+                   "what is ", "who is ", "tell me about ",
+                   "?", "？", "。"] {
+            q = q.replacingOccurrences(of: p, with: " ")
+        }
+        return q.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
-        return String(keywords.prefix(100))
+            .prefix(100)
+            .trimmingCharacters(in: .whitespaces)
     }
 
     // MARK: - Formatting
