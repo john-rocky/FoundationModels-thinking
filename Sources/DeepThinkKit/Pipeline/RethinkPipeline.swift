@@ -66,7 +66,12 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 """,
                 language: context.language
             )
-            let solvePrompt = "\(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
+            // If web search ran but found nothing useful, tell the model
+            var noInfoHint = ""
+            if configuration.webSearchEnabled && webSearchContext.isEmpty {
+                noInfoHint = "\n\nNote: A web search was performed but found no relevant information. If you don't have reliable information about this topic, say so honestly."
+            }
+            let solvePrompt = "\(query)\(conversationContext)\(memoryContext)\(webSearchContext)\(noInfoHint)"
 
             let solveRaw: String
             do {

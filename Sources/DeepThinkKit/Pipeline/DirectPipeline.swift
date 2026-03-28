@@ -62,6 +62,9 @@ public struct DirectPipeline: Pipeline, Sendable {
                 userPrompt += formatMemoryContext(memory)
             }
             userPrompt += webSearchContent
+            if configuration.webSearchEnabled && webSearchContent.isEmpty {
+                userPrompt += "\n\nNote: A web search was performed but found no relevant information. If you don't have reliable information about this topic, say so honestly."
+            }
             let directSystemPrompt = localizedSystemPrompt(
                 "You are a friendly, helpful assistant. Be conversational and natural. Give thorough but concise answers. If you are unsure or don't have enough information, say so honestly instead of guessing.",
                 language: context.language
