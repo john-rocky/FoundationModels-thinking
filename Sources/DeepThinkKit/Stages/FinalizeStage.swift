@@ -72,17 +72,8 @@ public struct FinalizeStage: Stage {
     }
 
     private func findBestAnswer(from outputs: [String: StageOutput]) -> String {
-        if let revised = outputs.first(where: { $0.value.stageKind == .revise })?.value {
-            return revised.content
-        }
         if let solved = outputs.first(where: { $0.value.stageKind == .solve })?.value {
             return solved.content
-        }
-        if let merged = outputs.first(where: { $0.value.stageKind == .merge })?.value {
-            return merged.content
-        }
-        if let aggregated = outputs.first(where: { $0.value.stageKind == .aggregate })?.value {
-            return aggregated.content
         }
         return outputs.values
             .sorted { $0.timestamp > $1.timestamp }

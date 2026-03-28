@@ -4,10 +4,7 @@ import Foundation
 
 public struct PipelineConfiguration: Sendable, Codable {
     public var maxStages: Int
-    public var maxCritiqueReviseLoops: Int
     public var maxRetries: Int
-    public var convergenceThreshold: Double
-    public var confidenceThreshold: Double
     public var branchCount: Int
     public var webSearchEnabled: Bool
     public var maxSearchResults: Int
@@ -15,20 +12,14 @@ public struct PipelineConfiguration: Sendable, Codable {
 
     public init(
         maxStages: Int = 20,
-        maxCritiqueReviseLoops: Int = 3,
         maxRetries: Int = 2,
-        convergenceThreshold: Double = 0.1,
-        confidenceThreshold: Double = 0.7,
         branchCount: Int = 3,
         webSearchEnabled: Bool = false,
         maxSearchResults: Int = 5,
         webSearchContextBudget: Int = 2000
     ) {
         self.maxStages = maxStages
-        self.maxCritiqueReviseLoops = maxCritiqueReviseLoops
         self.maxRetries = maxRetries
-        self.convergenceThreshold = convergenceThreshold
-        self.confidenceThreshold = confidenceThreshold
         self.branchCount = branchCount
         self.webSearchEnabled = webSearchEnabled
         self.maxSearchResults = maxSearchResults
@@ -94,50 +85,30 @@ public protocol Pipeline: Sendable {
 public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable {
     case auto
     case direct
-    case sequential
-    case critiqueLoop
-    case branchMerge
-    case selfConsistency
-    case verified
     case rethink
-    case stepByStep
+    case verified
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .auto: "Auto"
-        case .direct: "Direct (Single-Pass)"
-        case .sequential: "Sequential"
-        case .critiqueLoop: "Critique Loop"
-        case .branchMerge: "Branch & Merge"
-        case .selfConsistency: "Self-Consistency"
-        case .verified: "Verified (CSP)"
+        case .direct: "Direct"
         case .rethink: "Rethink"
-        case .stepByStep: "Step-by-Step"
+        case .verified: "Verified (CSP)"
         }
     }
 
     public var systemDescription: String {
         switch self {
         case .auto:
-            "Automatically selects the best pipeline for your query"
+            "Automatically selects Direct, Rethink, or Verified"
         case .direct:
-            "Query -> Response (no reasoning stages)"
-        case .sequential:
-            "Think step-by-step → Answer (multi-turn)"
-        case .critiqueLoop:
-            "Answer → Review → Final (multi-turn)"
-        case .branchMerge:
-            "Analyze -> {Solve A, B, C} -> Merge -> Finalize"
-        case .selfConsistency:
-            "Analyze -> Multi-Solve -> Aggregate -> Finalize"
-        case .verified:
-            "Extract Constraints -> Solve (deterministic) -> Explain"
+            "Single-pass answer (fast)"
         case .rethink:
-            "Restate → Solve → Verify (separate sessions)"
-        case .stepByStep:
-            "Execute → Re-Execute → Reconcile (isolated per step)"
+            "Analyze+Solve → Independent Verify (accurate)"
+        case .verified:
+            "Extract Constraints → Deterministic Solve → Explain"
         }
     }
 

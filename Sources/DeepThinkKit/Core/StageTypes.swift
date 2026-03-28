@@ -4,18 +4,19 @@ import Foundation
 
 public enum StageKind: String, Codable, Sendable, CaseIterable {
     case analyze
-    case plan
     case solve
-    case critique
-    case revise
     case finalize
+    case webSearch
+    case think
+    case critique
+    // Legacy cases kept for Codable compatibility
+    case plan
+    case revise
     case retrieveMemory
     case summarizeMemory
     case merge
     case aggregate
     case custom
-    case webSearch
-    case think
 }
 
 // MARK: - Stage Input

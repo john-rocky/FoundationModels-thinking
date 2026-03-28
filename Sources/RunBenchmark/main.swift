@@ -12,7 +12,6 @@ struct BenchmarkCLI {
 
         let modelProvider = FoundationModelProvider()
 
-        // Quick availability check
         do {
             _ = try await modelProvider.generate(systemPrompt: nil, userPrompt: "Say OK")
         } catch {
@@ -31,16 +30,11 @@ struct BenchmarkCLI {
         let pipelineKinds: [PipelineKind]
         switch pipelineName {
         case "direct": pipelineKinds = [.direct]
-        case "sequential": pipelineKinds = [.sequential]
-        case "critique": pipelineKinds = [.critiqueLoop]
         case "rethink": pipelineKinds = [.rethink]
-        case "branch": pipelineKinds = [.branchMerge]
-        case "sc": pipelineKinds = [.selfConsistency]
-        case "step": pipelineKinds = [.stepByStep]
-        case "all": pipelineKinds = [.direct, .sequential, .critiqueLoop, .rethink, .stepByStep]
-        case "thinking": pipelineKinds = [.sequential, .critiqueLoop, .rethink, .stepByStep]
+        case "verified": pipelineKinds = [.verified]
+        case "all": pipelineKinds = [.direct, .rethink]
         default:
-            print("Usage: RunBenchmark [direct|sequential|critique|rethink|branch|sc|all|thinking] [problem-ids|all]")
+            print("Usage: RunBenchmark [direct|rethink|verified|all] [problem-ids|all]")
             return
         }
 
@@ -59,9 +53,9 @@ struct BenchmarkCLI {
     }
 
     static func printReport(_ report: BenchmarkReport, pipelineKinds: [PipelineKind], problems: [BenchmarkProblem]) {
-        print("\n" + String(repeating: "=", count: 70))
+        print("\n" + String(repeating: "=", count: 60))
         print("BENCHMARK RESULTS")
-        print(String(repeating: "=", count: 70))
+        print(String(repeating: "=", count: 60))
 
         print("\n--- Accuracy ---")
         for kind in pipelineKinds {
@@ -71,19 +65,18 @@ struct BenchmarkCLI {
             let total = report.results(for: kind).count
             let bar = String(repeating: "#", count: Int(accuracy * 20))
                 + String(repeating: ".", count: 20 - Int(accuracy * 20))
-            print(String(format: "  %-20s %d/%d [\(bar)] %.0f%%  (avg %.1fs)",
+            print(String(format: "  %-12s %d/%d [\(bar)] %.0f%%  (avg %.1fs)",
                           kind.displayName as NSString,
                           correct, total, accuracy * 100, avgLatency))
         }
 
-        // Per-problem grid
         print("\n--- Per Problem ---")
         let colWidth = 14
         var header = "Problem".padding(toLength: 14, withPad: " ", startingAt: 0)
         header += " Expected"
             .padding(toLength: 10, withPad: " ", startingAt: 0)
         for kind in pipelineKinds {
-            header += " " + shortName(kind)
+            header += " " + kind.displayName
                 .padding(toLength: colWidth, withPad: " ", startingAt: 0)
         }
         print(header)
@@ -109,7 +102,6 @@ struct BenchmarkCLI {
             print(line)
         }
 
-        // Incorrect details
         let incorrect = report.results.filter { !$0.isCorrect }
         if !incorrect.isEmpty {
             print("\n--- Incorrect Answers ---")
@@ -117,34 +109,20 @@ struct BenchmarkCLI {
                 print("\n[\(result.pipelineKind.displayName)] \(result.problemId)")
                 print("  Expected: \(result.expectedAnswer)")
                 print("  Got:      \(result.extractedAnswer ?? "(none)")")
-                let snippet = String(result.fullOutput.prefix(300))
+                let snippet = String(result.fullOutput.prefix(200))
                     .replacingOccurrences(of: "\n", with: " ")
                 print("  Output:   \(snippet)")
             }
         }
 
         if pipelineKinds.count > 1, let directAcc = report.pipelineAccuracies[.direct] {
-            let thinkingAccs = pipelineKinds.filter { $0 != .direct }
-                .compactMap { report.pipelineAccuracies[$0] }
-            let bestThinking = thinkingAccs.max() ?? 0
+            let bestThinking = pipelineKinds.filter { $0 != .direct }
+                .compactMap { report.pipelineAccuracies[$0] }.max() ?? 0
             print("\n--- Summary ---")
-            print(String(format: "  Direct accuracy:         %.0f%%", directAcc * 100))
-            print(String(format: "  Best thinking accuracy:  %.0f%%", bestThinking * 100))
-            print(String(format: "  Delta:                  %+.0f%%", (bestThinking - directAcc) * 100))
+            print(String(format: "  Direct:   %.0f%%", directAcc * 100))
+            print(String(format: "  Rethink:  %.0f%%", bestThinking * 100))
+            print(String(format: "  Delta:   %+.0f%%", (bestThinking - directAcc) * 100))
         }
-        print(String(format: "  Total time:              %.0fs", report.totalDuration))
-    }
-
-    static func shortName(_ kind: PipelineKind) -> String {
-        switch kind {
-        case .direct: "Direct"
-        case .sequential: "Seq"
-        case .critiqueLoop: "Critique"
-        case .rethink: "Rethink"
-        case .stepByStep: "SbS"
-        case .branchMerge: "B&M"
-        case .selfConsistency: "SC"
-        default: kind.displayName
-        }
+        print(String(format: "  Total time: %.0fs", report.totalDuration))
     }
 }
