@@ -4,7 +4,6 @@ import Testing
 @Test func pipelineConfigurationDefaults() {
     let config = PipelineConfiguration.default
     #expect(config.maxStages == 20)
-    #expect(config.maxCritiqueReviseLoops == 3)
     #expect(config.maxRetries == 2)
 }
 
@@ -30,26 +29,23 @@ import Testing
     #expect(entry.tags.count == 2)
 }
 
-@Test func convergenceChecker() {
-    let policy = LoopPolicy(maxIterations: 3, convergenceThreshold: 0.1, confidenceTarget: 0.8)
-    let checker = ConvergenceChecker(policy: policy)
+@Test func answerExtraction() {
+    #expect(AnswerExtractor.extract(from: "The result is 42.\nAnswer: 42") == "42")
+    #expect(AnswerExtractor.extract(from: "答え：10") == "10")
+    #expect(AnswerExtractor.extract(from: "No explicit marker but 7 is the answer") == "7")
+}
 
-    let decision1 = checker.shouldContinue(iteration: 1, previousConfidence: 0.3, currentConfidence: 0.5)
-    if case .continue = decision1 {} else {
-        Issue.record("Expected continue")
-    }
+@Test func answerMatching() {
+    #expect(AnswerMatcher.matches(actual: "42", expected: "42", acceptableAnswers: ["42"]))
+    #expect(AnswerMatcher.matches(actual: "$80", expected: "80", acceptableAnswers: ["80", "$80"]))
+    #expect(!AnswerMatcher.matches(actual: "9", expected: "7", acceptableAnswers: ["7"]))
+}
 
-    let decision2 = checker.shouldContinue(iteration: 1, previousConfidence: 0.5, currentConfidence: 0.9)
-    if case .stop(let reason) = decision2 {
-        #expect(reason == .confidenceReached)
-    } else {
-        Issue.record("Expected stop")
-    }
-
-    let decision3 = checker.shouldContinue(iteration: 3, previousConfidence: 0.5, currentConfidence: 0.6)
-    if case .stop(let reason) = decision3 {
-        #expect(reason == .maxIterationsReached)
-    } else {
-        Issue.record("Expected stop")
-    }
+@Test func pipelineKindCoverage() {
+    let kinds = PipelineKind.allCases
+    #expect(kinds.contains(.direct))
+    #expect(kinds.contains(.rethink))
+    #expect(kinds.contains(.verified))
+    #expect(kinds.contains(.auto))
+    #expect(kinds.count == 4)
 }

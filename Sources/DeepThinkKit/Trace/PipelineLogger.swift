@@ -38,25 +38,6 @@ enum PipelineLogger {
         case .stageRetrying(let stageName, let attempt):
             print("[\(stageName)] Retrying (attempt \(attempt))...")
 
-        case .branchesStarted(let names):
-            print("\n\(divider)")
-            print("[Branches] Started: \(names.joined(separator: ", "))")
-
-        case .branchCompleted(let branchName, let output):
-            let conf = String(format: "%.0f%%", output.confidence * 100)
-            let preview = truncateForLog(output.content, maxLines: 15)
-            print("""
-            [Branch: \(branchName)] — confidence: \(conf)
-            \(preview)
-            """)
-
-        case .loopIterationStarted(let iteration, let max):
-            print("\n\(divider)")
-            print("[Loop] Iteration \(iteration)/\(max)")
-
-        case .loopEnded(let reason):
-            print("[Loop] Ended — \(reason)")
-
         case .pipelineCompleted(let result):
             let duration = String(format: "%.1f", result.totalDuration)
             let conf = String(format: "%.0f%%", result.finalOutput.confidence * 100)

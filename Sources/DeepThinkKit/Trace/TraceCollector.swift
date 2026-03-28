@@ -91,7 +91,7 @@ public actor TraceCollector {
                 records.append(last)
             }
 
-        case .memorySaved, .loopDecision, .pipelineStarted, .pipelineCompleted, .pipelineAborted:
+        case .memorySaved, .pipelineStarted, .pipelineCompleted, .pipelineAborted:
             break
         }
     }

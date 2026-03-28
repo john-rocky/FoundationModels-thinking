@@ -96,7 +96,7 @@ struct Conversation: Identifiable, Sendable, Codable {
         id: String = UUID().uuidString,
         title: String = "New Conversation",
         messages: [ChatMessage] = [],
-        pipelineKind: PipelineKind = .sequential,
+        pipelineKind: PipelineKind = .auto,
         createdAt: Date = .now
     ) {
         self.id = id

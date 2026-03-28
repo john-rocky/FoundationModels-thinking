@@ -9,7 +9,7 @@ final class ChatViewModel {
     var selectedConversationId: String?
     var inputText = ""
     var isProcessing = false
-    var selectedPipelineKind: PipelineKind = .sequential
+    var selectedPipelineKind: PipelineKind = .auto
     var showTrace = false
     var showMemoryBrowser = false
     var errorMessage: String?
@@ -31,7 +31,6 @@ final class ChatViewModel {
     var thinkingSteps: [ThinkingStep] = []
     var currentPipelineName: String?
     var expectedStageCount: Int = 0
-    var activeBranchNames: [String] = []
     var currentStreamingStageName: String?
     var currentStreamingContent: String = ""
     var streamingAnswerContent: String = ""
@@ -120,7 +119,6 @@ final class ChatViewModel {
             thinkingSteps = []
             currentPipelineName = nil
             expectedStageCount = 0
-            activeBranchNames = []
             currentStreamingStageName = nil
             currentStreamingContent = ""
             streamingAnswerContent = ""
@@ -297,36 +295,6 @@ final class ChatViewModel {
         case .stageRetrying(let name, let attempt):
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
                 thinkingSteps[idx].status = .retrying(attempt: attempt)
-            }
-
-        case .branchesStarted(let names):
-            activeBranchNames = names
-            let step = ThinkingStep(
-                stageName: "Parallel Solve (\(names.count) branches)",
-                stageKind: .solve,
-                index: thinkingSteps.count
-            )
-            thinkingSteps.append(step)
-
-        case .branchCompleted(let name, let output):
-            if let idx = thinkingSteps.lastIndex(where: { $0.stageName.hasPrefix("Parallel") }) {
-                thinkingSteps[idx].branchOutputs[name] = output
-                if thinkingSteps[idx].branchOutputs.count == activeBranchNames.count {
-                    thinkingSteps[idx].status = .completed
-                }
-            }
-
-        case .loopIterationStarted(let iteration, let max):
-            let step = ThinkingStep(
-                stageName: "Loop \(iteration)/\(max)",
-                stageKind: .critique,
-                index: thinkingSteps.count
-            )
-            thinkingSteps.append(step)
-
-        case .loopEnded:
-            if let idx = thinkingSteps.lastIndex(where: { $0.stageName.hasPrefix("Loop") }) {
-                thinkingSteps[idx].status = .completed
             }
 
         case .webSearchStarted(let keywords):

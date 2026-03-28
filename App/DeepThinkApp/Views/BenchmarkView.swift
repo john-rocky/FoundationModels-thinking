@@ -9,7 +9,7 @@ struct BenchmarkView: View {
     @State private var report: BenchmarkReport?
     @State private var selectedResult: BenchmarkResult?
     @State private var selectedPipelines: Set<PipelineKind> = [
-        .direct, .sequential, .critiqueLoop, .rethink
+        .direct, .rethink
     ]
 
     private let problems = BenchmarkProblem.standardSet
@@ -277,12 +277,8 @@ struct BenchmarkView: View {
     private func shortName(_ kind: PipelineKind) -> String {
         switch kind {
         case .direct: "Direct"
-        case .sequential: "Seq"
-        case .critiqueLoop: "Crit"
-        case .branchMerge: "B&M"
-        case .selfConsistency: "SC"
-        case .verified: "CSP"
         case .rethink: "Rethink"
+        case .verified: "CSP"
         case .auto: "Auto"
         }
     }

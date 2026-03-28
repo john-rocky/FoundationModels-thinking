@@ -71,7 +71,6 @@ public enum TraceEvent: Sendable {
     case retry(stage: String, attempt: Int, error: Error)
     case memoryRetrieved(stage: String, entries: [MemoryEntry])
     case memorySaved(stage: String, entry: MemoryEntry)
-    case loopDecision(stage: String, decision: LoopDecision)
     case pipelineStarted(name: String, query: String)
     case pipelineCompleted(name: String, duration: TimeInterval)
     case pipelineAborted(name: String, reason: String)

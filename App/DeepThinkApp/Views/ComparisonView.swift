@@ -5,7 +5,7 @@ struct ComparisonView: View {
     @State private var query = ""
     @State private var isRunning = false
     @State private var results: [ComparisonEntry] = []
-    @State private var selectedPipelines: Set<PipelineKind> = [.direct, .critiqueLoop]
+    @State private var selectedPipelines: Set<PipelineKind> = [.direct, .rethink]
     @State private var runningPipeline: String?
 
     var body: some View {
