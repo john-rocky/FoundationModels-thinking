@@ -76,26 +76,25 @@ public struct PipelineClassifier: Sendable {
         return .rethink
     }
 
-    /// Detect queries that would benefit from web search.
+    /// Web search is ON by default. Only skip for queries that clearly don't need it.
     public static func shouldWebSearch(_ query: String, conversationHistory: [(role: String, content: String)] = []) -> Bool {
-        let lower = query.lowercased()
-        let factualPatterns = [
-            "what is", "who is", "when did", "where is", "how many", "how much",
-            "latest", "current", "recent", "today", "news",
-            "what happened", "is it true", "tell me about",
-            "とは", "って何", "いつ", "最新", "ニュース", "現在", "今の",
-            "について", "誰が", "何が",
+        let lower = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Skip web search for greetings and very short input
+        let skipPatterns = [
+            "hi", "hello", "hey", "thanks", "bye",
+            "こんにちは", "おはよう", "ありがとう", "よろしく",
         ]
-        if factualPatterns.contains(where: { lower.contains($0) }) {
-            return true
+        if lower.count < 10 && skipPatterns.contains(where: { lower.contains($0) }) {
+            return false
         }
-        // Short follow-up with conversation history → likely needs web search
-        // if previous turn used it
-        let followUps = ["詳しく", "もっと", "他には", "続き", "more", "detail",
-                         "why", "how", "explain", "elaborate", "continue"]
-        if followUps.contains(where: { lower.contains($0) }) && !conversationHistory.isEmpty {
-            return true
-        }
-        return false
+
+        // Skip for pure math/calculation (no real-world knowledge needed)
+        if lower.contains("start with") && lower.contains("step") { return false }
+        if lower.contains("から始め") && lower.contains("繰り返") { return false }
+        if lower.allSatisfy({ $0.isNumber || $0.isWhitespace || "+-*/=()x".contains($0) }) { return false }
+
+        // Everything else → search
+        return true
     }
 }
