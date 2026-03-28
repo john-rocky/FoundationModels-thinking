@@ -20,7 +20,7 @@ public struct SolveStage: Stage {
         let plan = input.previousOutputs["Plan"].map { summarizeForNextStage($0) } ?? ""
 
         let systemPrompt = localizedSystemPrompt(
-            "Generate an answer following the analysis and plan below.",
+            "Generate an answer following the analysis and plan below. End with 'Answer: [value]' when the question has a specific answer.",
             language: context.language
         )
         var userPrompt = "Question: \(truncate(input.query, to: 500))"

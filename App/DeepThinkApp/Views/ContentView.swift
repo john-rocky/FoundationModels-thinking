@@ -18,14 +18,19 @@ struct ContentView: View {
                     ChatView()
                 }
             }
-            Tab("Memory", systemImage: "brain.head.profile") {
+            Tab("Benchmark", systemImage: "chart.bar.xaxis") {
                 NavigationStack {
-                    MemoryBrowserView()
+                    BenchmarkView()
                 }
             }
             Tab("Compare", systemImage: "chart.bar") {
                 NavigationStack {
                     ComparisonView()
+                }
+            }
+            Tab("Memory", systemImage: "brain.head.profile") {
+                NavigationStack {
+                    MemoryBrowserView()
                 }
             }
         }

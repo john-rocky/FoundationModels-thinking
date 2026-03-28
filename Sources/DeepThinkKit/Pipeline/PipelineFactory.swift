@@ -22,6 +22,10 @@ public enum PipelineFactory {
             SelfConsistencyPipeline(configuration: configuration)
         case .verified:
             VerifiedPipeline(configuration: configuration)
+        case .rethink:
+            RethinkPipeline(configuration: configuration)
+        case .stepByStep:
+            StepByStepPipeline(configuration: configuration)
         }
     }
 }

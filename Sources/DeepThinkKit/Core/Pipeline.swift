@@ -99,6 +99,8 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
     case branchMerge
     case selfConsistency
     case verified
+    case rethink
+    case stepByStep
 
     public var id: String { rawValue }
 
@@ -111,6 +113,8 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
         case .branchMerge: "Branch & Merge"
         case .selfConsistency: "Self-Consistency"
         case .verified: "Verified (CSP)"
+        case .rethink: "Rethink"
+        case .stepByStep: "Step-by-Step"
         }
     }
 
@@ -130,6 +134,10 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
             "Analyze -> Multi-Solve -> Aggregate -> Finalize"
         case .verified:
             "Extract Constraints -> Solve (deterministic) -> Explain"
+        case .rethink:
+            "Restate → Solve → Verify (separate sessions)"
+        case .stepByStep:
+            "Execute → Re-Execute → Reconcile (isolated per step)"
         }
     }
 

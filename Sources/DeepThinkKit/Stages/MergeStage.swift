@@ -21,7 +21,7 @@ public struct MergeStage: Stage {
             .joined(separator: "\n\n")
 
         let systemPrompt = localizedSystemPrompt(
-            "Select the best parts from each answer and integrate into one.",
+            "Select the best parts from each answer and integrate into one. End with 'Answer: [value]'.",
             language: context.language
         )
         let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"
@@ -63,7 +63,7 @@ public struct AggregateStage: Stage {
             .joined(separator: "\n\n")
 
         let systemPrompt = localizedSystemPrompt(
-            "Compare the answers. Trust majority consensus and output the final answer.",
+            "Compare the answers. Trust majority consensus and output the final answer. End with 'Answer: [value]'.",
             language: context.language
         )
         let userPrompt = "Question: \(truncate(input.query, to: 300))\n\n[Answers]\n\(solveOutputs)"

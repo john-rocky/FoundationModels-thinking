@@ -1,11 +1,11 @@
 import Foundation
 
 // MARK: - Critique Loop Pipeline
-// Answer -> Review -> Final Answer (multi-turn session)
+// Solve (session A) -> Critique (session B) -> Finalize (session C)
 
 public struct CritiqueLoopPipeline: Pipeline, Sendable {
     public let name = "CritiqueLoop"
-    public let description = "Answer → Review → Final (multi-turn session)"
+    public let description = "Solve → Critique → Final (separate sessions)"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] { [] }
@@ -45,31 +45,32 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
                 memoryContext = formatMemoryContext(memory)
             }
 
-            // Require multi-turn session support
-            guard let sessionProvider = context.modelProvider as? ModelSessionProvider else {
-                let direct = DirectPipeline(configuration: configuration)
-                return try await direct.execute(query: query, context: context)
-            }
-
-            let instructions = localizedSystemPrompt(
-                "You are an assistant that answers carefully and reviews your own work.",
-                language: context.language
-            )
-
-            let session = sessionProvider.createSession(instructions: instructions)
-
-            // --- Turn 1: Solve ---
+            // --- Stage 1: Solve (fresh session) ---
             await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Solve", kind: .solve, input: query))
 
-            let solvePrompt = "Answer the following question.\n\nQuestion: \(query)\(memoryContext)\(webSearchContext)"
-
-            let solveRaw = try await streamingSessionGenerate(
-                stageName: "Solve",
-                prompt: solvePrompt,
-                session: session,
-                context: context
+            let solveSystem = localizedSystemPrompt(
+                "You solve problems step by step. Show your work. Always end with 'Answer: [value]'.",
+                language: context.language
             )
+            let solvePrompt = "Solve this problem step by step. Show your work. End with 'Answer: [your answer]'\n\nProblem: \(query)\(memoryContext)\(webSearchContext)"
+
+            let solveRaw: String
+            do {
+                solveRaw = try await streamingGenerate(
+                    stageName: "Solve",
+                    systemPrompt: solveSystem,
+                    userPrompt: solvePrompt,
+                    context: context
+                )
+            } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
+                solveRaw = try await streamingGenerate(
+                    stageName: "Solve",
+                    systemPrompt: solveSystem,
+                    userPrompt: "Solve this problem step by step. End with 'Answer: [your answer]'\n\nProblem: \(query)\(webSearchContext)",
+                    context: context
+                )
+            }
 
             let solveOutput = parseOutput(raw: solveRaw, kind: .solve)
             allOutputs.append(solveOutput)
@@ -78,22 +79,32 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            // --- Turn 2: Critique (session sees full Solve output) ---
+            // --- Stage 2: Critique (fresh session, reviews the solve output) ---
             await context.emit(.stageStarted(stageName: "Critique", stageKind: .critique, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Critique", kind: .critique, input: ""))
 
+            let critiqueSystem = localizedSystemPrompt(
+                "You review answers to problems. Find errors if any exist.",
+                language: context.language
+            )
+            let solveAnswer = truncate(solveRaw, to: 600)
             let critiquePrompt = """
-                Review your answer above.
-                - Are there any factual errors?
-                - Any logical gaps or oversights?
-                - Could the explanation be improved?
-                Point out specific issues if any. If the answer is correct, say "No issues found."
+                Problem: \(query)
+
+                Proposed solution:
+                \(solveAnswer)
+
+                Check this solution for these specific issues:
+                1. Re-read the problem wording carefully. Was the problem interpreted correctly?
+                2. Are all calculations correct? Redo the math.
+                3. Does the answer make sense?
+                If you find an error, explain what is wrong. If correct, say "No issues found."
                 """
 
-            let critiqueRaw = try await streamingSessionGenerate(
+            let critiqueRaw = try await streamingGenerate(
                 stageName: "Critique",
-                prompt: critiquePrompt,
-                session: session,
+                systemPrompt: critiqueSystem,
+                userPrompt: critiquePrompt,
                 context: context
             )
 
@@ -104,16 +115,31 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Critique", stageKind: .critique, output: critiqueOutput, index: stageIndex))
             stageIndex += 1
 
-            // --- Turn 3: Final Answer (session sees both Solve and Critique) ---
+            // --- Stage 3: Finalize (fresh session, produces corrected answer) ---
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let finalPrompt = "Based on your review above, write your final answer. Fix any issues you identified, and keep the parts that were correct."
+            let finalSystem = localizedSystemPrompt(
+                "You write final answers to problems. Be clear and correct. Always end with 'Answer: [value]'.",
+                language: context.language
+            )
+            let critique = truncate(critiqueRaw, to: 400)
+            let finalPrompt = """
+                Problem: \(query)
 
-            let finalRaw = try await streamingSessionGenerate(
+                Initial solution:
+                \(solveAnswer)
+
+                Review feedback:
+                \(critique)
+
+                Write the final corrected answer. Fix any issues found in the review. If no errors were found, restate the answer. End with 'Answer: [your answer]'
+                """
+
+            let finalRaw = try await streamingGenerate(
                 stageName: "Finalize",
-                prompt: finalPrompt,
-                session: session,
+                systemPrompt: finalSystem,
+                userPrompt: finalPrompt,
                 context: context
             )
 

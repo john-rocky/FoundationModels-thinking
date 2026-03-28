@@ -59,7 +59,7 @@ public struct DirectPipeline: Pipeline, Sendable {
             }
             userPrompt += webSearchContent
             let directSystemPrompt = localizedSystemPrompt(
-                "Think carefully, then answer clearly and completely.",
+                "Answer clearly and completely. End with 'Answer: [value]' when the question has a specific answer.",
                 language: context.language
             )
             do {

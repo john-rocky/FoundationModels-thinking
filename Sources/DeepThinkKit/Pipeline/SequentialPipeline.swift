@@ -1,11 +1,11 @@
 import Foundation
 
 // MARK: - Sequential Pipeline
-// Think (step-by-step) -> Answer (multi-turn session)
+// Think (separate session) -> Answer (separate session)
 
 public struct SequentialPipeline: Pipeline, Sendable {
     public let name = "Sequential"
-    public let description = "Think step-by-step → Answer (multi-turn session)"
+    public let description = "Think → Answer (separate sessions)"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] { [] }
@@ -45,40 +45,40 @@ public struct SequentialPipeline: Pipeline, Sendable {
                 memoryContext = formatMemoryContext(memory)
             }
 
-            // Require multi-turn session support
-            guard let sessionProvider = context.modelProvider as? ModelSessionProvider else {
-                let direct = DirectPipeline(configuration: configuration)
-                return try await direct.execute(query: query, context: context)
-            }
-
-            let instructions = localizedSystemPrompt(
-                "You are an assistant that thinks carefully before answering.",
-                language: context.language
-            )
-
-            let session = sessionProvider.createSession(instructions: instructions)
-
-            // --- Turn 1: Think ---
+            // --- Stage 1: Think (fresh session) ---
             await context.emit(.stageStarted(stageName: "Think", stageKind: .think, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Think", kind: .think, input: query))
 
+            let thinkSystem = localizedSystemPrompt(
+                "You analyze problems carefully before solving. Be brief and precise.",
+                language: context.language
+            )
             let thinkPrompt = """
-                Think through this question step by step:
-                1. Clarify what is being asked
-                2. Identify key facts and constraints
-                3. Consider your approach
-                4. Check for things easy to overlook
-                Write your thinking process. Do not write the final answer yet.
+                Read the problem carefully. Before solving, identify:
+                1. What is being asked
+                2. Key numbers, facts, or conditions
+                3. Common mistakes to avoid
+                Write a brief analysis only. Do not write the final answer yet.
 
-                Question: \(query)\(memoryContext)\(webSearchContext)
+                Problem: \(query)\(memoryContext)\(webSearchContext)
                 """
 
-            let thinkRaw = try await streamingSessionGenerate(
-                stageName: "Think",
-                prompt: thinkPrompt,
-                session: session,
-                context: context
-            )
+            let thinkRaw: String
+            do {
+                thinkRaw = try await streamingGenerate(
+                    stageName: "Think",
+                    systemPrompt: thinkSystem,
+                    userPrompt: thinkPrompt,
+                    context: context
+                )
+            } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
+                thinkRaw = try await streamingGenerate(
+                    stageName: "Think",
+                    systemPrompt: thinkSystem,
+                    userPrompt: "Read the problem carefully. Identify what is asked, key facts, and common mistakes. Do not solve yet.\n\nProblem: \(query)\(webSearchContext)",
+                    context: context
+                )
+            }
 
             let thinkOutput = parseOutput(raw: thinkRaw, kind: .think)
             allOutputs.append(thinkOutput)
@@ -87,16 +87,21 @@ public struct SequentialPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Think", stageKind: .think, output: thinkOutput, index: stageIndex))
             stageIndex += 1
 
-            // --- Turn 2: Answer (session remembers full Think output) ---
+            // --- Stage 2: Answer (fresh session, receives analysis) ---
             await context.emit(.stageStarted(stageName: "Finalize", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
-            let answerPrompt = "Based on your thinking above, write your final answer."
+            let answerSystem = localizedSystemPrompt(
+                "You solve problems step by step. Always end with 'Answer: [value]'.",
+                language: context.language
+            )
+            let analysis = truncate(thinkRaw, to: 600)
+            let answerPrompt = "Problem: \(query)\n\nAnalysis: \(analysis)\n\nSolve step by step using the analysis above. End with 'Answer: [your answer]'"
 
-            let answerRaw = try await streamingSessionGenerate(
+            let answerRaw = try await streamingGenerate(
                 stageName: "Finalize",
-                prompt: answerPrompt,
-                session: session,
+                systemPrompt: answerSystem,
+                userPrompt: answerPrompt,
                 context: context
             )
 
