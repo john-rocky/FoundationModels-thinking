@@ -199,13 +199,6 @@ final class ChatViewModel {
                 handlePipelineEvent(event)
             }
 
-            // If this task was cancelled (user sent a new message), don't wait for pipeline
-            guard !Task.isCancelled else {
-                resultTask.cancel()
-                await context.finishEventStream()
-                return
-            }
-
             let result = try await resultTask.value
 
             let assistantMessage = ChatMessage(

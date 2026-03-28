@@ -9,8 +9,6 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
     public init() {}
 
     public func generate(systemPrompt: String?, userPrompt: String) async throws -> String {
-        try Task.checkCancellation()
-
         guard SystemLanguageModel.default.isAvailable else {
             throw StageError.modelUnavailable
         }
@@ -38,46 +36,32 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
     }
 
     public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
-        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
-
-        let task = Task {
-            guard SystemLanguageModel.default.isAvailable else {
-                continuation.finish(throwing: StageError.modelUnavailable)
-                return
-            }
-
-            let session: LanguageModelSession
-            if let systemPrompt, !systemPrompt.isEmpty {
-                let sanitized = Self.sanitizeInstructions(systemPrompt)
-                session = LanguageModelSession(instructions: sanitized)
-            } else {
-                session = LanguageModelSession()
-            }
-
-            do {
-                let modelStream = session.streamResponse(to: userPrompt)
-                for try await partial in modelStream {
-                    if Task.isCancelled {
-                        continuation.finish()
-                        return
-                    }
-                    continuation.yield(partial.content)
+        AsyncThrowingStream { continuation in
+            Task {
+                guard SystemLanguageModel.default.isAvailable else {
+                    continuation.finish(throwing: StageError.modelUnavailable)
+                    return
                 }
-                continuation.finish()
-            } catch {
-                if Task.isCancelled {
-                    continuation.finish()
+
+                let session: LanguageModelSession
+                if let systemPrompt, !systemPrompt.isEmpty {
+                    let sanitized = Self.sanitizeInstructions(systemPrompt)
+                    session = LanguageModelSession(instructions: sanitized)
                 } else {
+                    session = LanguageModelSession()
+                }
+
+                do {
+                    let stream = session.streamResponse(to: userPrompt)
+                    for try await partial in stream {
+                        continuation.yield(partial.content)
+                    }
+                    continuation.finish()
+                } catch {
                     Self.finishWithError(error, continuation: continuation)
                 }
             }
         }
-
-        continuation.onTermination = { @Sendable _ in
-            task.cancel()
-        }
-
-        return stream
     }
 
     /// Sanitize instructions to reduce safety guard triggers by replacing aggressive language
@@ -183,59 +167,41 @@ final class FoundationModelSession: ModelSession, @unchecked Sendable {
 
         let currentSession = session!
 
-        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
-
-        let task = Task { [weak self] in
-            var yieldedContent = false
-            do {
-                let modelStream = currentSession.streamResponse(to: prompt)
-                for try await partial in modelStream {
-                    if Task.isCancelled {
-                        continuation.finish()
-                        return
+        return AsyncThrowingStream { continuation in
+            Task { [weak self] in
+                var yieldedContent = false
+                do {
+                    let stream = currentSession.streamResponse(to: prompt)
+                    for try await partial in stream {
+                        yieldedContent = true
+                        continuation.yield(partial.content)
                     }
-                    yieldedContent = true
-                    continuation.yield(partial.content)
-                }
-                continuation.finish()
-            } catch {
-                if Task.isCancelled {
                     continuation.finish()
-                    return
-                }
-                if FoundationModelProvider.isSafetyFilterError(error) && !yieldedContent,
-                   let self, !self.usedFallback {
-                    // Fallback: recreate session without instructions, embed in prompt
-                    self.usedFallback = true
-                    self.session = LanguageModelSession()
-                    let fallbackPrompt = FoundationModelProvider.buildPrompt(
-                        systemPrompt: self.instructions, userPrompt: prompt
-                    )
-                    do {
-                        let fallbackStream = self.session!.streamResponse(to: fallbackPrompt)
-                        for try await partial in fallbackStream {
-                            if Task.isCancelled {
-                                continuation.finish()
-                                return
+                } catch {
+                    if FoundationModelProvider.isSafetyFilterError(error) && !yieldedContent,
+                       let self, !self.usedFallback {
+                        // Fallback: recreate session without instructions, embed in prompt
+                        self.usedFallback = true
+                        self.session = LanguageModelSession()
+                        let fallbackPrompt = FoundationModelProvider.buildPrompt(
+                            systemPrompt: self.instructions, userPrompt: prompt
+                        )
+                        do {
+                            let fallbackStream = self.session!.streamResponse(to: fallbackPrompt)
+                            for try await partial in fallbackStream {
+                                continuation.yield(partial.content)
                             }
-                            continuation.yield(partial.content)
+                            continuation.finish()
+                        } catch {
+                            FoundationModelProvider.finishWithError(error, continuation: continuation)
                         }
-                        continuation.finish()
-                    } catch {
+                    } else if FoundationModelProvider.isContextTooLongError(error) {
+                        continuation.finish(throwing: ModelError.contextTooLong)
+                    } else {
                         FoundationModelProvider.finishWithError(error, continuation: continuation)
                     }
-                } else if FoundationModelProvider.isContextTooLongError(error) {
-                    continuation.finish(throwing: ModelError.contextTooLong)
-                } else {
-                    FoundationModelProvider.finishWithError(error, continuation: continuation)
                 }
             }
         }
-
-        continuation.onTermination = { @Sendable _ in
-            task.cancel()
-        }
-
-        return stream
     }
 }
