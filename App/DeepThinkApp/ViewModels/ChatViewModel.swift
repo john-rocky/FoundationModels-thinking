@@ -58,13 +58,26 @@ final class ChatViewModel {
             self.appLanguage = .japanese
         }
         self.webSearchEnabled = UserDefaults.standard.bool(forKey: "webSearchEnabled")
-        createNewConversation()
+
+        // Restore saved conversations
+        let saved = ConversationStore.load()
+        if saved.isEmpty {
+            createNewConversation()
+        } else {
+            self.conversations = saved
+            self.selectedConversationId = saved.first?.id
+        }
+    }
+
+    private func persistConversations() {
+        ConversationStore.save(conversations)
     }
 
     func createNewConversation() {
         let conversation = Conversation(pipelineKind: selectedPipelineKind)
         conversations.insert(conversation, at: 0)
         selectedConversationId = conversation.id
+        persistConversations()
     }
 
     func deleteConversation(id: String) {
@@ -72,6 +85,7 @@ final class ChatViewModel {
         if selectedConversationId == id {
             selectedConversationId = conversations.first?.id
         }
+        persistConversations()
     }
 
     func send() {
@@ -128,11 +142,23 @@ final class ChatViewModel {
             )) ?? []
             await context.setRetrievedMemory(memoryHits)
 
+            // Inject recent conversation history for multi-turn context
+            if let conv = conversations.first(where: { $0.id == conversationId }) {
+                let recentMessages = conv.messages.suffix(6) // Last 3 exchanges
+                let history = recentMessages.map { msg in
+                    (role: msg.role == .user ? "User" : "Assistant",
+                     content: msg.content)
+                }
+                await context.setConversationHistory(history)
+            }
+
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
+            // Auto-enable web search for factual queries
+            let shouldSearch = webSearchEnabled || PipelineClassifier.shouldWebSearch(text)
             let config = PipelineConfiguration(
-                webSearchEnabled: webSearchEnabled
+                webSearchEnabled: shouldSearch
             )
 
             let effectiveKind: PipelineKind
@@ -182,6 +208,7 @@ final class ChatViewModel {
                     conversations[index] = conversation
                 }
             }
+            persistConversations()
 
             if result.finalOutput.confidence >= 0.3 {
                 let entry = MemoryEntry(

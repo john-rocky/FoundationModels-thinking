@@ -82,6 +82,19 @@ public struct PipelineClassifier: Sendable {
         return nil
     }
 
+    /// Detect queries that would benefit from web search (factual, current events, lookup).
+    public static func shouldWebSearch(_ query: String) -> Bool {
+        let lower = query.lowercased()
+        let factualPatterns = [
+            "what is", "who is", "when did", "where is", "how many", "how much",
+            "latest", "current", "recent", "today", "news",
+            "what happened", "is it true", "tell me about",
+            "とは", "って何", "いつ", "最新", "ニュース", "現在", "今の",
+            "について教えて", "誰が", "何が",
+        ]
+        return factualPatterns.contains(where: { lower.contains($0) })
+    }
+
     // MARK: - LLM Response Parsing
 
     /// Parse the model's A/B/C/D/E label response into a PipelineKind.

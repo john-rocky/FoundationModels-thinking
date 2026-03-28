@@ -2,8 +2,22 @@ import Foundation
 
 // MARK: - Context Size Limits
 
-private let maxContextLength = 1200
+private let maxContextLength = 1500
 private let maxPreviousOutputLength = 800
+
+/// Dynamic context budget allocation.
+/// Priority: conversation history > web search > long-term memory.
+public struct ContextBudget: Sendable {
+    public let conversation: Int
+    public let webSearch: Int
+    public let memory: Int
+
+    /// Default budget with 1500-char total limit.
+    public static let `default` = ContextBudget(conversation: 400, webSearch: 800, memory: 200)
+
+    /// Budget when no web search results are available.
+    public static let noWeb = ContextBudget(conversation: 500, webSearch: 0, memory: 300)
+}
 
 // MARK: - Streaming Generate Helper
 
@@ -86,6 +100,29 @@ func parseOutput(raw: String, kind: StageKind) -> StageOutput {
 /// Wrap a base system prompt with the language directive from context.
 func localizedSystemPrompt(_ base: String, language: AppLanguage) -> String {
     "\(base)\n\(language.languageDirective)"
+}
+
+/// Format recent conversation history for injection into prompts.
+/// Keeps only the most recent turns to stay within context budget.
+func formatConversationHistory(
+    _ history: [(role: String, content: String)],
+    budget: Int = 400
+) -> String {
+    guard !history.isEmpty else { return "" }
+    var result = "\n\n[Previous Conversation]\n"
+    var used = result.count
+    // Take from the end (most recent turns first), reverse for chronological order
+    var selected: [(role: String, content: String)] = []
+    for turn in history.reversed() {
+        let entry = "\(turn.role): \(truncate(turn.content, to: 100))\n"
+        if used + entry.count > budget { break }
+        selected.insert(turn, at: 0)
+        used += entry.count
+    }
+    for turn in selected {
+        result += "\(turn.role): \(truncate(turn.content, to: 100))\n"
+    }
+    return result
 }
 
 func formatMemoryContext(_ entries: [MemoryEntry]) -> String {

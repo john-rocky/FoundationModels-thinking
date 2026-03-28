@@ -38,11 +38,16 @@ public struct SequentialPipeline: Pipeline, Sendable {
                 }
             }
 
-            // Build memory context
+            // Build memory + conversation context
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
                 memoryContext = formatMemoryContext(memory)
+            }
+            let history = await context.getConversationHistory()
+            var conversationContext = ""
+            if !history.isEmpty {
+                conversationContext = formatConversationHistory(history)
             }
 
             // --- Stage 1: Think (fresh session) ---
@@ -60,7 +65,7 @@ public struct SequentialPipeline: Pipeline, Sendable {
                 3. Common mistakes to avoid
                 Write a brief analysis only. Do not write the final answer yet.
 
-                Problem: \(query)\(memoryContext)\(webSearchContext)
+                Problem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)
                 """
 
             let thinkRaw: String

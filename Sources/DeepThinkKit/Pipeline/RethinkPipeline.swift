@@ -41,11 +41,16 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 }
             }
 
-            // Build memory context
+            // Build memory + conversation context
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
                 memoryContext = formatMemoryContext(memory)
+            }
+            let history = await context.getConversationHistory()
+            var conversationContext = ""
+            if !history.isEmpty {
+                conversationContext = formatConversationHistory(history)
             }
 
             // --- Stage 1: Restate (fresh session) ---
@@ -56,7 +61,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 "You clarify problems. Restate the problem in simple terms and identify what needs to be found. Be brief.",
                 language: context.language
             )
-            let restatePrompt = "Restate this problem simply. What do we need to find?\n\nProblem: \(query)\(memoryContext)\(webSearchContext)"
+            let restatePrompt = "Restate this problem simply. What do we need to find?\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
 
             let restateRaw: String
             do {

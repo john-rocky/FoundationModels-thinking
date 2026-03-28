@@ -38,11 +38,16 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
                 }
             }
 
-            // Build memory context
+            // Build memory + conversation context
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
                 memoryContext = formatMemoryContext(memory)
+            }
+            let history = await context.getConversationHistory()
+            var conversationContext = ""
+            if !history.isEmpty {
+                conversationContext = formatConversationHistory(history)
             }
 
             // --- Stage 1: Solve (fresh session) ---
@@ -53,7 +58,7 @@ public struct CritiqueLoopPipeline: Pipeline, Sendable {
                 "You solve problems step by step. Show your work. Always end with 'Answer: [value]'.",
                 language: context.language
             )
-            let solvePrompt = "Solve this problem step by step. Show your work. End with 'Answer: [your answer]'\n\nProblem: \(query)\(memoryContext)\(webSearchContext)"
+            let solvePrompt = "Solve this problem step by step. Show your work. End with 'Answer: [your answer]'\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
 
             let solveRaw: String
             do {

@@ -53,7 +53,11 @@ public struct DirectPipeline: Pipeline, Sendable {
         let raw: String
         do {
             let memory = await context.getRetrievedMemory()
+            let history = await context.getConversationHistory()
             var userPrompt = query
+            if !history.isEmpty {
+                userPrompt += formatConversationHistory(history)
+            }
             if !memory.isEmpty {
                 userPrompt += formatMemoryContext(memory)
             }
