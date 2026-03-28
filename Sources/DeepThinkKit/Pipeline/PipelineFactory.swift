@@ -14,8 +14,12 @@ public enum PipelineFactory {
             DirectPipeline(configuration: configuration)
         case .sequential:
             SequentialPipeline(configuration: configuration)
+        case .sequentialSeparate:
+            SequentialSeparatePipeline(configuration: configuration)
         case .critiqueLoop:
             CritiqueLoopPipeline(configuration: configuration)
+        case .critiqueLoopSeparate:
+            CritiqueLoopSeparatePipeline(configuration: configuration)
         case .branchMerge:
             BranchMergePipeline(configuration: configuration)
         case .selfConsistency:

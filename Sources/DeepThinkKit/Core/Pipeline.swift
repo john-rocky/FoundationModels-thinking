@@ -95,7 +95,9 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
     case auto
     case direct
     case sequential
+    case sequentialSeparate
     case critiqueLoop
+    case critiqueLoopSeparate
     case branchMerge
     case selfConsistency
     case verified
@@ -107,7 +109,9 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
         case .auto: "Auto"
         case .direct: "Direct (Single-Pass)"
         case .sequential: "Sequential"
+        case .sequentialSeparate: "Sequential (Separate)"
         case .critiqueLoop: "Critique Loop"
+        case .critiqueLoopSeparate: "Critique Loop (Separate)"
         case .branchMerge: "Branch & Merge"
         case .selfConsistency: "Self-Consistency"
         case .verified: "Verified (CSP)"
@@ -122,8 +126,12 @@ public enum PipelineKind: String, Codable, Sendable, CaseIterable, Identifiable 
             "Query -> Response (no reasoning stages)"
         case .sequential:
             "Think step-by-step → Answer (multi-turn)"
+        case .sequentialSeparate:
+            "Think step-by-step → Answer (separate sessions)"
         case .critiqueLoop:
             "Answer → Review → Final (multi-turn)"
+        case .critiqueLoopSeparate:
+            "Answer → Review → Final (separate sessions)"
         case .branchMerge:
             "Analyze -> {Solve A, B, C} -> Merge -> Finalize"
         case .selfConsistency:
