@@ -1,14 +1,15 @@
 import Foundation
 
-// MARK: - Rethink Pipeline (Separate Sessions)
-// Restate (Session A) → Solve (Session B) → Verify (Session C)
+// MARK: - Rethink Pipeline (2-stage)
+// Solve (session A) → Independent Verify (session B)
 //
-// Key technique: each stage uses a fresh LanguageModelSession to avoid
-// context pollution — important for on-device models with limited context.
+// Key difference from CritiqueLoop: the Verify stage solves the problem
+// independently first, THEN compares with the proposed answer.
+// This avoids anchoring bias.
 
 public struct RethinkPipeline: Pipeline, Sendable {
     public let name = "Rethink"
-    public let description = "Restate → Solve → Verify (separate sessions)"
+    public let description = "Solve → Independent Verify (2 separate sessions)"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] { [] }
@@ -23,7 +24,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
         await context.traceCollector.record(event: .pipelineStarted(name: name, query: query))
 
         let searchStageCount = configuration.webSearchEnabled ? 1 : 0
-        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 3 + searchStageCount))
+        await context.emit(.pipelineStarted(pipelineName: name, stageCount: 2 + searchStageCount))
 
         var allOutputs: [StageOutput] = []
         var stageIndex = 0
@@ -41,7 +42,6 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 }
             }
 
-            // Build memory + conversation context
             let memory = await context.getRetrievedMemory()
             var memoryContext = ""
             if !memory.isEmpty {
@@ -53,41 +53,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 conversationContext = formatConversationHistory(history)
             }
 
-            // --- Stage 1: Restate (fresh session) ---
-            await context.emit(.stageStarted(stageName: "Restate", stageKind: .analyze, index: stageIndex))
-            await context.traceCollector.record(event: .stageStarted(stage: "Restate", kind: .analyze, input: query))
-
-            let restateSystem = localizedSystemPrompt(
-                "You clarify problems. Restate the problem in simple terms and identify what needs to be found. Be brief.",
-                language: context.language
-            )
-            let restatePrompt = "Restate this problem simply. What do we need to find?\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
-
-            let restateRaw: String
-            do {
-                restateRaw = try await streamingGenerate(
-                    stageName: "Restate",
-                    systemPrompt: restateSystem,
-                    userPrompt: restatePrompt,
-                    context: context
-                )
-            } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
-                restateRaw = try await streamingGenerate(
-                    stageName: "Restate",
-                    systemPrompt: restateSystem,
-                    userPrompt: "Restate this problem simply. What do we need to find?\n\nProblem: \(query)\(webSearchContext)",
-                    context: context
-                )
-            }
-
-            let restateOutput = parseOutput(raw: restateRaw, kind: .analyze)
-            allOutputs.append(restateOutput)
-            await context.setOutput(restateOutput, for: "Restate")
-            await context.traceCollector.record(event: .stageCompleted(stage: "Restate", output: restateOutput))
-            await context.emit(.stageCompleted(stageName: "Restate", stageKind: .analyze, output: restateOutput, index: stageIndex))
-            stageIndex += 1
-
-            // --- Stage 2: Solve (fresh session, receives analysis) ---
+            // --- Stage 1: Solve (fresh session) ---
             await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Solve", kind: .solve, input: query))
 
@@ -95,15 +61,24 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 "You solve problems step by step. Show your work clearly. Always end with 'Answer: [value]'.",
                 language: context.language
             )
-            let analysis = truncate(restateRaw, to: 600)
-            let solvePrompt = "Problem: \(query)\n\nKey information: \(analysis)\n\nSolve step by step. End with 'Answer: [your answer]'"
+            let solvePrompt = "Solve step by step. End with 'Answer: [your answer]'\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
 
-            let solveRaw = try await streamingGenerate(
-                stageName: "Solve",
-                systemPrompt: solveSystem,
-                userPrompt: solvePrompt,
-                context: context
-            )
+            let solveRaw: String
+            do {
+                solveRaw = try await streamingGenerate(
+                    stageName: "Solve",
+                    systemPrompt: solveSystem,
+                    userPrompt: solvePrompt,
+                    context: context
+                )
+            } catch let error as ModelError where error.isContextTooLong && !memory.isEmpty {
+                solveRaw = try await streamingGenerate(
+                    stageName: "Solve",
+                    systemPrompt: solveSystem,
+                    userPrompt: "Solve step by step. End with 'Answer: [your answer]'\n\nProblem: \(query)\(webSearchContext)",
+                    context: context
+                )
+            }
 
             let solveOutput = parseOutput(raw: solveRaw, kind: .solve)
             allOutputs.append(solveOutput)
@@ -112,22 +87,25 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            // Extract proposed answer from solve stage
-            let proposedAnswer = AnswerExtractor.extract(from: solveRaw) ?? truncate(solveRaw, to: 200)
+            let proposedAnswer = AnswerExtractor.extract(from: solveRaw) ?? ""
 
-            // --- Stage 3: Verify (fresh session, checks the answer) ---
+            // --- Stage 2: Independent Verify (fresh session) ---
+            // Solve independently first, then compare
             await context.emit(.stageStarted(stageName: "Verify", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
             let verifySystem = localizedSystemPrompt(
-                "You verify answers to problems. Check the proposed answer carefully. If wrong, provide the correct answer.",
+                "You verify answers by solving problems independently. Always end with 'Answer: [value]'.",
                 language: context.language
             )
             let verifyPrompt = """
                 Problem: \(query)
-                Proposed answer: \(proposedAnswer)
+                Someone proposed the answer: \(proposedAnswer)
 
-                Check if this answer is correct. Solve the problem again briefly using a different approach. If the answer is correct, confirm it. If wrong, show the correct solution. End with 'Answer: [final answer]'
+                Solve this problem yourself from scratch using a different approach.
+                Then compare your answer with the proposed answer.
+                If they agree, confirm. If they differ, determine which is correct.
+                End with 'Answer: [your answer]'
                 """
 
             let verifyRaw = try await streamingGenerate(
