@@ -13,9 +13,9 @@ public struct PipelineClassifier: Sendable {
         if let heuristic = heuristicClassify(query) {
             return heuristic
         }
-        // Default to Rethink for anything non-trivial.
-        // The quality benefit of verification outweighs the latency cost.
-        return .rethink
+        // Default: most queries are informational/conversational → Direct is best.
+        // Rethink only helps for multi-step reasoning problems.
+        return .direct
     }
 
     // MARK: - Heuristic Classification
@@ -26,11 +26,7 @@ public struct PipelineClassifier: Sendable {
 
         // Very short input → Direct
         if trimmed.count < 15 {
-            let greetings = ["hi", "hello", "hey", "thanks", "thank you", "bye",
-                             "こんにちは", "おはよう", "ありがとう", "よろしく", "おつかれ"]
-            if greetings.contains(where: { lower.contains($0) }) {
-                return .direct
-            }
+            return .direct
         }
 
         // Math / logic / puzzle → Verified
@@ -42,6 +38,18 @@ public struct PipelineClassifier: Sendable {
         ]
         if puzzlePatterns.contains(where: { lower.contains($0) }) {
             return .verified
+        }
+
+        // Multi-step reasoning → Rethink
+        let reasoningPatterns = [
+            "step 1", "step 2", "calculate", "compute",
+            "start with", "if even", "if odd", "swap",
+            "how many", "what is the remainder",
+            "ステップ", "計算", "から始め", "偶数なら", "奇数なら",
+            "何個", "何匹", "何人", "いくつ", "いくら",
+        ]
+        if reasoningPatterns.contains(where: { lower.contains($0) }) {
+            return .rethink
         }
 
         return nil

@@ -115,43 +115,16 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 context: context
             )
 
-            let verifyAnswer = AnswerExtractor.extract(from: verifyRaw) ?? ""
-
-            // If Solve and Verify agree → done (2 calls)
-            // If they disagree → tiebreaker 3rd call (3 calls)
+            // Quality gate: use Verify only if it's better than Solve.
+            // If Verify is garbage (too short, refusal, code when not asked), keep Solve.
             let finalRaw: String
-            let finalKind: StageKind
-            if !proposedAnswer.isEmpty && !verifyAnswer.isEmpty
-                && proposedAnswer.lowercased() == verifyAnswer.lowercased() {
-                // Agreement — use Verify output as-is
+            if isUsableResponse(verifyRaw, solveRaw: solveRaw) {
                 finalRaw = verifyRaw
-                finalKind = .finalize
-            } else if proposedAnswer.isEmpty || verifyAnswer.isEmpty {
-                finalRaw = verifyRaw
-                finalKind = .finalize
             } else {
-                // Disagreement — tiebreaker
-                await context.emit(.stageStreamingContent(
-                    stageName: "Verify",
-                    content: "Solve: \(proposedAnswer) vs Verify: \(verifyAnswer) — running tiebreaker..."
-                ))
-
-                let tbSystem = localizedSystemPrompt(
-                    "You are a careful problem solver. Track state at each step. End with 'Answer: [value]'.",
-                    language: context.language
-                )
-                let tbPrompt = "Solve from scratch. Show state after each step.\n\nProblem: \(query)"
-
-                finalRaw = try await streamingGenerate(
-                    stageName: "Verify",
-                    systemPrompt: tbSystem,
-                    userPrompt: tbPrompt,
-                    context: context
-                )
-                finalKind = .finalize
+                finalRaw = solveRaw
             }
 
-            let verifyOutput = parseOutput(raw: finalRaw, kind: finalKind)
+            let verifyOutput = parseOutput(raw: finalRaw, kind: .finalize)
             allOutputs.append(verifyOutput)
             await context.setOutput(verifyOutput, for: "Verify")
             await context.traceCollector.record(event: .stageCompleted(stage: "Verify", output: verifyOutput))
@@ -182,5 +155,29 @@ public struct RethinkPipeline: Pipeline, Sendable {
         await context.emit(.pipelineCompleted(result: result))
         await context.finishEventStream()
         return result
+    }
+
+    /// Check if Verify output is usable, or if Solve was better.
+    private func isUsableResponse(_ verify: String, solveRaw: String) -> Bool {
+        let v = verify.trimmingCharacters(in: .whitespacesAndNewlines)
+        let s = solveRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Refusal → not usable
+        let refusals = ["i cannot", "i can't", "i apologize", "申し訳", "お答えできません"]
+        if refusals.contains(where: { v.lowercased().contains($0) }) {
+            return false
+        }
+
+        // Too short compared to Solve → probably degraded
+        if v.count < s.count / 3 && s.count > 50 {
+            return false
+        }
+
+        // Code output when Solve was natural language → wrong format
+        if v.hasPrefix("```") && !s.hasPrefix("```") && !s.contains("code") {
+            return false
+        }
+
+        return true
     }
 }
