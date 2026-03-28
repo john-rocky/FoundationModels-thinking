@@ -63,7 +63,7 @@ public struct DirectPipeline: Pipeline, Sendable {
             }
             userPrompt += webSearchContent
             let directSystemPrompt = localizedSystemPrompt(
-                "You are a friendly, helpful assistant. Be conversational and natural. Give thorough but concise answers.",
+                "You are a friendly, helpful assistant. Be conversational and natural. Give thorough but concise answers. If you are unsure or don't have enough information, say so honestly instead of guessing.",
                 language: context.language
             )
             do {

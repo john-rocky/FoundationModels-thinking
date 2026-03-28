@@ -62,6 +62,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 You are a friendly, helpful assistant. Think carefully before answering.
                 For calculations or step-by-step problems, show your work clearly and track state at each step.
                 For conversations, be natural and concise.
+                If you are unsure or don't have enough information, say so honestly instead of guessing.
                 """,
                 language: context.language
             )

@@ -142,23 +142,27 @@ public struct WebSearchStage: Stage {
         return output
     }
 
-    // MARK: - Keyword Extraction (restored original approach)
+    // MARK: - Keyword Extraction
 
+    /// Extract search keywords without LLM — simple heuristic approach.
+    /// LLM extraction was unreliable (returned full sentences instead of keywords).
     private func extractKeywords(query: String, context: PipelineContext) async throws -> String {
-        let systemPrompt = """
-            Extract 3-5 search keywords from the question for a web search.
-            Output only the keywords on a single line. No explanation needed.
-            """
-
-        let raw = try await context.modelProvider.generate(
-            systemPrompt: systemPrompt,
-            userPrompt: truncate(query, to: 500)
-        )
-
-        return raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: .newlines)
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? ""
+        // Strip common question patterns to get the core topic
+        var q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let removePatterns = [
+            "について教えて", "とは何ですか", "とは", "って何", "を教えて",
+            "について", "はどういう", "ですか？", "ですか",
+            "what is ", "who is ", "tell me about ", "how to ",
+            "explain ", "what are ", "?", "？", "。", ".",
+        ]
+        for pattern in removePatterns {
+            q = q.replacingOccurrences(of: pattern, with: " ")
+        }
+        // Collapse whitespace and return as search query
+        let keywords = q.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return String(keywords.prefix(100))
     }
 
     // MARK: - Formatting
