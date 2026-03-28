@@ -97,11 +97,17 @@ public struct SequentialPipeline: Pipeline, Sendable {
             await context.traceCollector.record(event: .stageStarted(stage: "Finalize", kind: .finalize, input: ""))
 
             let answerSystem = localizedSystemPrompt(
-                "You solve problems step by step. Always end with 'Answer: [value]'.",
+                """
+                You solve problems step by step with explicit state tracking.
+                After EACH step, write "State: [current values]".
+                For conditionals, check the condition BEFORE choosing the branch.
+                Count iterations explicitly. NEVER skip steps.
+                End with "Answer: [value]".
+                """,
                 language: context.language
             )
             let analysis = truncate(thinkRaw, to: 600)
-            let answerPrompt = "Problem: \(query)\n\nAnalysis: \(analysis)\n\nSolve step by step using the analysis above. End with 'Answer: [your answer]'"
+            let answerPrompt = "Problem: \(query)\n\nAnalysis: \(analysis)\n\nSolve step by step, tracking state after each step. End with 'Answer: [your answer]'"
 
             let answerRaw = try await streamingGenerate(
                 stageName: "Finalize",

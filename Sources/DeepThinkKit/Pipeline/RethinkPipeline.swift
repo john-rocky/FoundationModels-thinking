@@ -1,15 +1,15 @@
 import Foundation
 
-// MARK: - Rethink Pipeline (2-stage)
-// Solve (session A) → Independent Verify (session B)
+// MARK: - Rethink Pipeline (2-stage, best-of-both)
+// Stage 1: Analyze + Solve with explicit state tracking (fresh session)
+// Stage 2: Independent re-solve + compare (fresh session)
 //
-// Key difference from CritiqueLoop: the Verify stage solves the problem
-// independently first, THEN compares with the proposed answer.
-// This avoids anchoring bias.
+// Combines Sequential's "think first" with independent verification.
+// Forces explicit state tracking at each step to prevent counting errors.
 
 public struct RethinkPipeline: Pipeline, Sendable {
     public let name = "Rethink"
-    public let description = "Solve → Independent Verify (2 separate sessions)"
+    public let description = "Analyze+Solve → Independent Verify (2 sessions)"
     public let configuration: PipelineConfiguration
 
     public var stages: [any Stage] { [] }
@@ -53,15 +53,24 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 conversationContext = formatConversationHistory(history)
             }
 
-            // --- Stage 1: Solve (fresh session) ---
+            // --- Stage 1: Analyze + Solve with forced state tracking ---
             await context.emit(.stageStarted(stageName: "Solve", stageKind: .solve, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Solve", kind: .solve, input: query))
 
             let solveSystem = localizedSystemPrompt(
-                "You solve problems step by step. Show your work clearly. Always end with 'Answer: [value]'.",
+                """
+                You solve problems with careful state tracking.
+                Rules:
+                - Before solving, note what type of problem this is and what to track.
+                - Execute each step one at a time. NEVER skip steps.
+                - After EACH step, write "State: [all current values]".
+                - For conditionals, evaluate the condition BEFORE choosing the branch.
+                - Count iterations explicitly: "Iteration 1:", "Iteration 2:", etc.
+                - End with "Answer: [value]".
+                """,
                 language: context.language
             )
-            let solvePrompt = "Solve step by step. End with 'Answer: [your answer]'\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
+            let solvePrompt = "Solve step by step with explicit state tracking.\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
 
             let solveRaw: String
             do {
@@ -75,7 +84,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 solveRaw = try await streamingGenerate(
                     stageName: "Solve",
                     systemPrompt: solveSystem,
-                    userPrompt: "Solve step by step. End with 'Answer: [your answer]'\n\nProblem: \(query)\(webSearchContext)",
+                    userPrompt: "Solve step by step with explicit state tracking.\n\nProblem: \(query)\(webSearchContext)",
                     context: context
                 )
             }
@@ -89,22 +98,26 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             let proposedAnswer = AnswerExtractor.extract(from: solveRaw) ?? ""
 
-            // --- Stage 2: Independent Verify (fresh session) ---
-            // Solve independently first, then compare
+            // --- Stage 2: Independent verify (fresh session, solves from scratch) ---
             await context.emit(.stageStarted(stageName: "Verify", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
             let verifySystem = localizedSystemPrompt(
-                "You verify answers by solving problems independently. Always end with 'Answer: [value]'.",
+                """
+                You verify answers by solving problems independently.
+                Solve the problem yourself first, then compare with the proposed answer.
+                Track state explicitly at each step.
+                End with "Answer: [value]".
+                """,
                 language: context.language
             )
             let verifyPrompt = """
                 Problem: \(query)
-                Someone proposed the answer: \(proposedAnswer)
+                Proposed answer: \(proposedAnswer)
 
-                Solve this problem yourself from scratch using a different approach.
-                Then compare your answer with the proposed answer.
-                If they agree, confirm. If they differ, determine which is correct.
+                Solve this yourself from scratch. Track state at each step.
+                Then compare your answer with the proposed one.
+                If they match, confirm. If they differ, explain which is correct.
                 End with 'Answer: [your answer]'
                 """
 
