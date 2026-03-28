@@ -153,8 +153,9 @@ final class ChatViewModel {
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
-            // Auto-enable web search for factual queries
-            let shouldSearch = webSearchEnabled || PipelineClassifier.shouldWebSearch(text)
+            // Auto-enable web search for factual queries or follow-ups
+            let history = await context.getConversationHistory()
+            let shouldSearch = webSearchEnabled || PipelineClassifier.shouldWebSearch(text, conversationHistory: history)
             let config = PipelineConfiguration(
                 webSearchEnabled: shouldSearch
             )

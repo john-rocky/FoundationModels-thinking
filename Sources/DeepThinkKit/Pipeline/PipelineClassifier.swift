@@ -24,9 +24,15 @@ public struct PipelineClassifier: Sendable {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()
 
-        // Very short input → Direct
+        // Very short input: greetings → Direct, follow-ups → Rethink
         if trimmed.count < 15 {
-            return .direct
+            let greetings = ["hi", "hello", "hey", "thanks", "thank you", "bye",
+                             "こんにちは", "おはよう", "ありがとう", "よろしく", "おつかれ"]
+            if greetings.contains(where: { lower.contains($0) }) {
+                return .direct
+            }
+            // Short non-greeting = likely a follow-up ("もっと詳しく", "why?", etc.)
+            return nil // → falls through to default .rethink
         }
 
         // Math / logic / puzzle → Verified
@@ -71,7 +77,7 @@ public struct PipelineClassifier: Sendable {
     }
 
     /// Detect queries that would benefit from web search.
-    public static func shouldWebSearch(_ query: String) -> Bool {
+    public static func shouldWebSearch(_ query: String, conversationHistory: [(role: String, content: String)] = []) -> Bool {
         let lower = query.lowercased()
         let factualPatterns = [
             "what is", "who is", "when did", "where is", "how many", "how much",
@@ -80,6 +86,16 @@ public struct PipelineClassifier: Sendable {
             "とは", "って何", "いつ", "最新", "ニュース", "現在", "今の",
             "について教えて", "誰が", "何が",
         ]
-        return factualPatterns.contains(where: { lower.contains($0) })
+        if factualPatterns.contains(where: { lower.contains($0) }) {
+            return true
+        }
+        // Short follow-up with conversation history → likely needs web search
+        // if previous turn used it
+        let followUps = ["詳しく", "もっと", "他には", "続き", "more", "detail",
+                         "why", "how", "explain", "elaborate", "continue"]
+        if followUps.contains(where: { lower.contains($0) }) && !conversationHistory.isEmpty {
+            return true
+        }
+        return false
     }
 }
