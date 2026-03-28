@@ -38,43 +38,46 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
     }
 
     public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                guard SystemLanguageModel.default.isAvailable else {
-                    continuation.finish(throwing: StageError.modelUnavailable)
-                    return
-                }
+        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
 
-                let session: LanguageModelSession
-                if let systemPrompt, !systemPrompt.isEmpty {
-                    let sanitized = Self.sanitizeInstructions(systemPrompt)
-                    session = LanguageModelSession(instructions: sanitized)
-                } else {
-                    session = LanguageModelSession()
-                }
+        let task = Task {
+            guard SystemLanguageModel.default.isAvailable else {
+                continuation.finish(throwing: StageError.modelUnavailable)
+                return
+            }
 
-                do {
-                    let stream = session.streamResponse(to: userPrompt)
-                    for try await partial in stream {
-                        if Task.isCancelled {
-                            continuation.finish()
-                            return
-                        }
-                        continuation.yield(partial.content)
-                    }
-                    continuation.finish()
-                } catch {
+            let session: LanguageModelSession
+            if let systemPrompt, !systemPrompt.isEmpty {
+                let sanitized = Self.sanitizeInstructions(systemPrompt)
+                session = LanguageModelSession(instructions: sanitized)
+            } else {
+                session = LanguageModelSession()
+            }
+
+            do {
+                let modelStream = session.streamResponse(to: userPrompt)
+                for try await partial in modelStream {
                     if Task.isCancelled {
                         continuation.finish()
-                    } else {
-                        Self.finishWithError(error, continuation: continuation)
+                        return
                     }
+                    continuation.yield(partial.content)
+                }
+                continuation.finish()
+            } catch {
+                if Task.isCancelled {
+                    continuation.finish()
+                } else {
+                    Self.finishWithError(error, continuation: continuation)
                 }
             }
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
         }
+
+        continuation.onTermination = { @Sendable _ in
+            task.cancel()
+        }
+
+        return stream
     }
 
     /// Sanitize instructions to reduce safety guard triggers by replacing aggressive language
@@ -180,56 +183,59 @@ final class FoundationModelSession: ModelSession, @unchecked Sendable {
 
         let currentSession = session!
 
-        return AsyncThrowingStream { continuation in
-            let task = Task { [weak self] in
-                var yieldedContent = false
-                do {
-                    let stream = currentSession.streamResponse(to: prompt)
-                    for try await partial in stream {
-                        if Task.isCancelled {
-                            continuation.finish()
-                            return
-                        }
-                        yieldedContent = true
-                        continuation.yield(partial.content)
-                    }
-                    continuation.finish()
-                } catch {
+        let (stream, continuation) = AsyncThrowingStream<String, Error>.makeStream()
+
+        let task = Task { [weak self] in
+            var yieldedContent = false
+            do {
+                let modelStream = currentSession.streamResponse(to: prompt)
+                for try await partial in modelStream {
                     if Task.isCancelled {
                         continuation.finish()
                         return
                     }
-                    if FoundationModelProvider.isSafetyFilterError(error) && !yieldedContent,
-                       let self, !self.usedFallback {
-                        // Fallback: recreate session without instructions, embed in prompt
-                        self.usedFallback = true
-                        self.session = LanguageModelSession()
-                        let fallbackPrompt = FoundationModelProvider.buildPrompt(
-                            systemPrompt: self.instructions, userPrompt: prompt
-                        )
-                        do {
-                            let fallbackStream = self.session!.streamResponse(to: fallbackPrompt)
-                            for try await partial in fallbackStream {
-                                if Task.isCancelled {
-                                    continuation.finish()
-                                    return
-                                }
-                                continuation.yield(partial.content)
+                    yieldedContent = true
+                    continuation.yield(partial.content)
+                }
+                continuation.finish()
+            } catch {
+                if Task.isCancelled {
+                    continuation.finish()
+                    return
+                }
+                if FoundationModelProvider.isSafetyFilterError(error) && !yieldedContent,
+                   let self, !self.usedFallback {
+                    // Fallback: recreate session without instructions, embed in prompt
+                    self.usedFallback = true
+                    self.session = LanguageModelSession()
+                    let fallbackPrompt = FoundationModelProvider.buildPrompt(
+                        systemPrompt: self.instructions, userPrompt: prompt
+                    )
+                    do {
+                        let fallbackStream = self.session!.streamResponse(to: fallbackPrompt)
+                        for try await partial in fallbackStream {
+                            if Task.isCancelled {
+                                continuation.finish()
+                                return
                             }
-                            continuation.finish()
-                        } catch {
-                            FoundationModelProvider.finishWithError(error, continuation: continuation)
+                            continuation.yield(partial.content)
                         }
-                    } else if FoundationModelProvider.isContextTooLongError(error) {
-                        continuation.finish(throwing: ModelError.contextTooLong)
-                    } else {
+                        continuation.finish()
+                    } catch {
                         FoundationModelProvider.finishWithError(error, continuation: continuation)
                     }
+                } else if FoundationModelProvider.isContextTooLongError(error) {
+                    continuation.finish(throwing: ModelError.contextTooLong)
+                } else {
+                    FoundationModelProvider.finishWithError(error, continuation: continuation)
                 }
             }
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
         }
+
+        continuation.onTermination = { @Sendable _ in
+            task.cancel()
+        }
+
+        return stream
     }
 }
