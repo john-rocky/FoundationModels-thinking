@@ -50,8 +50,20 @@ struct ChatView: View {
                             .id("thinking")
                     }
 
-                    StreamingAnswerBubble(content: viewModel.streamingAnswerContent)
+                    // Plain Text during streaming — Markdown only after completion.
+                    if !viewModel.streamingAnswerContent.isEmpty {
+                        HStack {
+                            Text(viewModel.streamingAnswerContent)
+                                .font(.body)
+                                .textSelection(.enabled)
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(AppColors.secondaryBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            Spacer(minLength: 60)
+                        }
                         .id("streaming-answer")
+                    }
                 }
                 .padding()
             }
@@ -64,17 +76,10 @@ struct ChatView: View {
             }
             .onChange(of: viewModel.thinkingSteps.count) {
                 if viewModel.isProcessing {
-                    withAnimation {
-                        proxy.scrollTo("thinking", anchor: .bottom)
-                    }
-                }
-            }
-            .onChange(of: viewModel.currentStreamingContent.count / 50) {
-                if viewModel.isProcessing {
                     proxy.scrollTo("thinking", anchor: .bottom)
                 }
             }
-            .onChange(of: viewModel.streamingAnswerContent.count / 50) {
+            .onChange(of: viewModel.streamingAnswerContent.count / 200) {
                 if !viewModel.streamingAnswerContent.isEmpty {
                     proxy.scrollTo("streaming-answer", anchor: .bottom)
                 }

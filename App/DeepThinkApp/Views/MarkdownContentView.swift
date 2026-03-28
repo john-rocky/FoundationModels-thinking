@@ -216,7 +216,7 @@ struct MarkdownContentView: View {
     var body: some View {
         let blocks = MarkdownParser.parse(content)
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+            ForEach(blocks) { block in
                 MarkdownBlockView(block: block)
             }
         }
@@ -242,7 +242,7 @@ private struct MarkdownBlockView: View {
 
         case .unorderedList(let items):
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                ForEach(Array(items.enumerated()), id: \.element) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\u{2022}")
                             .foregroundStyle(.secondary)
@@ -253,7 +253,7 @@ private struct MarkdownBlockView: View {
 
         case .orderedList(let items):
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                ForEach(Array(items.enumerated()), id: \.element) { index, item in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(index + 1).")
                             .foregroundStyle(.secondary)

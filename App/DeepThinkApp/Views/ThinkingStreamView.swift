@@ -80,20 +80,12 @@ struct ThinkingStreamView: View {
                         }
 
                         if !viewModel.currentStreamingContent.isEmpty {
-                            ScrollViewReader { proxy in
-                                ScrollView(.vertical) {
-                                    Text(viewModel.currentStreamingContent)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .id("streamingBottom")
-                                }
-                                .frame(maxHeight: 200)
-                                .onChange(of: viewModel.currentStreamingContent.count / 50) {
-                                    proxy.scrollTo("streamingBottom", anchor: .bottom)
-                                }
-                            }
+                            Text(viewModel.currentStreamingContent)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, maxHeight: 200, alignment: .leading)
+                                .lineLimit(12)
                         }
                     }
                     .padding(.horizontal, 16)
