@@ -13,26 +13,9 @@ public struct PipelineClassifier: Sendable {
         if let heuristic = heuristicClassify(query) {
             return heuristic
         }
-
-        let userPrompt = """
-            Pick ONE label for the following question. Reply with the label letter only.
-
-            A: Simple greeting, single-fact lookup, translation, or short answer.
-            B: Needs reasoning, multi-step calculation, or careful analysis.
-            C: Has one correct answer that can be computed. Math, logic, or constraint-based puzzle.
-
-            Question: \(String(query.prefix(400)))
-            """
-
-        do {
-            let raw = try await modelProvider.generate(
-                systemPrompt: nil,
-                userPrompt: userPrompt
-            )
-            return parseLabel(raw)
-        } catch {
-            return .rethink
-        }
+        // Default to Rethink for anything non-trivial.
+        // The quality benefit of verification outweighs the latency cost.
+        return .rethink
     }
 
     // MARK: - Heuristic Classification

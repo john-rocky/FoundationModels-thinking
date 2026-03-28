@@ -59,18 +59,13 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             let solveSystem = localizedSystemPrompt(
                 """
-                You solve problems with careful state tracking.
-                Rules:
-                - Before solving, note what type of problem this is and what to track.
-                - Execute each step one at a time. NEVER skip steps.
-                - After EACH step, write "State: [all current values]".
-                - For conditionals, evaluate the condition BEFORE choosing the branch.
-                - Count iterations explicitly: "Iteration 1:", "Iteration 2:", etc.
-                - End with "Answer: [value]".
+                You are a friendly, helpful assistant. Think carefully before answering.
+                For calculations or step-by-step problems, show your work clearly and track state at each step.
+                For conversations, be natural and concise.
                 """,
                 language: context.language
             )
-            let solvePrompt = "Solve step by step with explicit state tracking.\n\nProblem: \(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
+            let solvePrompt = "\(query)\(conversationContext)\(memoryContext)\(webSearchContext)"
 
             let solveRaw: String
             do {
@@ -103,22 +98,14 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
             let verifySystem = localizedSystemPrompt(
-                """
-                You verify answers by solving problems independently.
-                Solve the problem yourself first, then compare with the proposed answer.
-                Track state explicitly at each step.
-                End with "Answer: [value]".
-                """,
+                "You verify answers by solving problems independently. Be thorough but concise.",
                 language: context.language
             )
             let verifyPrompt = """
-                Problem: \(query)
-                Proposed answer: \(proposedAnswer)
+                Question: \(query)
+                Proposed response: \(proposedAnswer)
 
-                Solve this yourself from scratch. Track state at each step.
-                Then compare your answer with the proposed one.
-                If they match, confirm. If they differ, explain which is correct.
-                End with 'Answer: [your answer]'
+                Check if this response is correct and complete. If you find issues, provide a corrected version. If it's good, refine and improve it.
                 """
 
             let verifyRaw = try await streamingGenerate(
