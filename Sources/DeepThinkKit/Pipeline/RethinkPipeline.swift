@@ -59,10 +59,11 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             let solveSystem = localizedSystemPrompt(
                 """
-                You are a friendly, helpful assistant. Think carefully before answering.
-                For calculations or step-by-step problems, show your work clearly and track state at each step.
+                You are a friendly, helpful assistant.
+                Before solving any problem, first identify what approach, formula, or concept is needed.
+                Then solve step by step, tracking state at each step.
                 For conversations, be natural and concise.
-                If you are unsure or don't have enough information, say so honestly instead of guessing.
+                If you are unsure, say so honestly instead of guessing.
                 """,
                 language: context.language
             )
