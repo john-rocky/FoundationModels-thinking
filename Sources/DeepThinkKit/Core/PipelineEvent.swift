@@ -20,6 +20,7 @@ public enum PipelineEvent: Sendable {
     case webPageFetchStarted(count: Int)
     case webPageFetchCompleted(successCount: Int)
     case webContentExtracting
+    case deepSearchRoundStarted(round: Int, keywords: String)
 
     // Auto mode classification
     case autoClassified(resolvedKind: PipelineKind)

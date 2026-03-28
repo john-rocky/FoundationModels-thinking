@@ -114,6 +114,11 @@ struct ChatView: View {
                 Toggle(isOn: $vm.webSearchEnabled) {
                     Label("Web Search", systemImage: "magnifyingglass")
                 }
+                if vm.webSearchEnabled {
+                    Toggle(isOn: $vm.deepSearchEnabled) {
+                        Label("Deep Search", systemImage: "magnifyingglass.circle")
+                    }
+                }
             }
         } label: {
             pipelineMenuLabel

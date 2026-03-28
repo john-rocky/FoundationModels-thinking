@@ -19,6 +19,11 @@ final class ChatViewModel {
             UserDefaults.standard.set(webSearchEnabled, forKey: "webSearchEnabled")
         }
     }
+    var deepSearchEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(deepSearchEnabled, forKey: "deepSearchEnabled")
+        }
+    }
     private var currentTask: Task<Void, Never>?
 
     var appLanguage: AppLanguage {
@@ -57,6 +62,7 @@ final class ChatViewModel {
             self.appLanguage = .japanese
         }
         self.webSearchEnabled = UserDefaults.standard.bool(forKey: "webSearchEnabled")
+        self.deepSearchEnabled = UserDefaults.standard.bool(forKey: "deepSearchEnabled")
 
         // Restore saved conversations
         let saved = ConversationStore.load()
@@ -153,8 +159,11 @@ final class ChatViewModel {
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
+            let searchDepth = webSearchEnabled && deepSearchEnabled ? 3 : 1
             let config = PipelineConfiguration(
-                webSearchEnabled: webSearchEnabled
+                webSearchEnabled: webSearchEnabled,
+                webSearchContextBudget: searchDepth > 1 ? 3000 : 2000,
+                maxSearchDepth: searchDepth
             )
 
             let effectiveKind: PipelineKind
@@ -268,7 +277,13 @@ final class ChatViewModel {
                     case "searched":
                         let count = output.metadata["resultCount"] ?? "0"
                         let pages = output.metadata["pagesFetched"] ?? "0"
-                        let label = pages != "0" ? "Web Search (\(count) results, \(pages) pages)" : "Web Search (\(count) results)"
+                        let rounds = output.metadata["searchRounds"] ?? "1"
+                        let label: String
+                        if rounds != "1" {
+                            label = "Deep Search (\(count) results, \(pages) pages, \(rounds) rounds)"
+                        } else {
+                            label = pages != "0" ? "Web Search (\(count) results, \(pages) pages)" : "Web Search (\(count) results)"
+                        }
                         thinkingSteps[idx] = ThinkingStep(stageName: label, stageKind: .webSearch, index: thinkingSteps[idx].index)
                         thinkingSteps[idx].status = .completed
                         thinkingSteps[idx].output = output
@@ -313,6 +328,9 @@ final class ChatViewModel {
                     index: thinkingSteps[idx].index
                 )
             }
+
+        case .deepSearchRoundStarted(let round, let keywords):
+            currentStreamingContent = "Deep search (round \(round)): \(keywords)"
 
         case .webPageFetchStarted(let count):
             currentStreamingContent = "Fetching \(count) pages..."

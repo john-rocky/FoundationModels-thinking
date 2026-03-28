@@ -12,16 +12,19 @@ public struct WebSearchStage: Stage {
     private let maxResults: Int
     private let pageFetcher: WebPageFetcher
     private let maxPageFetchCount: Int
+    private let maxSearchDepth: Int
 
     public init(
         searchProvider: any WebSearchProvider = DuckDuckGoSearchProvider(),
         maxResults: Int = 5,
-        maxPageFetchCount: Int = 2
+        maxPageFetchCount: Int = 2,
+        maxSearchDepth: Int = 1
     ) {
         self.searchProvider = searchProvider
         self.maxResults = maxResults
         self.pageFetcher = WebPageFetcher()
         self.maxPageFetchCount = maxPageFetchCount
+        self.maxSearchDepth = maxSearchDepth
     }
 
     public func execute(input: StageInput, context: PipelineContext) async throws -> StageOutput {
@@ -46,16 +49,16 @@ public struct WebSearchStage: Stage {
             return output
         }
 
-        // Step 2: Execute web search
+        // Step 2: Execute web search (round 1)
         await context.emit(.webSearchStarted(keywords: keywords))
         await context.emit(.stageStreamingContent(
             stageName: name,
             content: "Searching: \(keywords)"
         ))
 
-        let results: [WebSearchResult]
+        var allResults: [WebSearchResult]
         do {
-            results = try await searchProvider.search(keywords: keywords, maxResults: maxResults)
+            allResults = try await searchProvider.search(keywords: keywords, maxResults: maxResults)
         } catch {
             let output = StageOutput(
                 stageKind: .webSearch,
@@ -68,7 +71,7 @@ public struct WebSearchStage: Stage {
             return output
         }
 
-        guard !results.isEmpty else {
+        guard !allResults.isEmpty else {
             let output = StageOutput(
                 stageKind: .webSearch,
                 content: "No search results found.",
@@ -80,20 +83,56 @@ public struct WebSearchStage: Stage {
             return output
         }
 
-        await context.emit(.webSearchCompleted(resultCount: results.count))
+        await context.emit(.webSearchCompleted(resultCount: allResults.count))
+        var actualRounds = 1
 
-        // Step 3: Fetch actual page content from top results (parallel, best-effort)
-        let fetchCount = min(results.count, maxPageFetchCount)
+        // Step 3: Deep search - evaluate results and do follow-up rounds if needed
+        if maxSearchDepth > 1 {
+            for round in 2...maxSearchDepth {
+                guard let followUpQuery = try? await evaluateAndSuggestFollowUp(
+                    query: input.query,
+                    currentResults: allResults,
+                    context: context
+                ) else { break }
+
+                actualRounds = round
+                await context.emit(.deepSearchRoundStarted(round: round, keywords: followUpQuery))
+                await context.emit(.stageStreamingContent(
+                    stageName: name,
+                    content: "Deep search (\(round)/\(maxSearchDepth)): \(followUpQuery)"
+                ))
+
+                let newResults: [WebSearchResult]
+                do {
+                    newResults = try await searchProvider.search(
+                        keywords: followUpQuery,
+                        maxResults: maxResults
+                    )
+                } catch {
+                    break
+                }
+
+                // Merge results, deduplicating by URL
+                let existingURLs = Set(allResults.map(\.url))
+                let uniqueNew = newResults.filter { !existingURLs.contains($0.url) }
+                allResults.append(contentsOf: uniqueNew)
+
+                await context.emit(.webSearchCompleted(resultCount: allResults.count))
+            }
+        }
+
+        // Step 4: Fetch actual page content from top results (parallel, best-effort)
+        let fetchCount = min(allResults.count, maxPageFetchCount)
         await context.emit(.webPageFetchStarted(count: fetchCount))
         await context.emit(.stageStreamingContent(
             stageName: name,
             content: "Fetching \(fetchCount) pages..."
         ))
 
-        var enrichedResults = results
+        var enrichedResults = allResults
         let fetchedPages = await withTaskGroup(of: (Int, String).self) { group in
             for i in 0..<fetchCount {
-                let url = results[i].url
+                let url = allResults[i].url
                 group.addTask {
                     let content = await pageFetcher.fetchPageContent(url: url)
                     return (i, content)
@@ -115,10 +154,10 @@ public struct WebSearchStage: Stage {
         }
         await context.emit(.webPageFetchCompleted(successCount: successCount))
 
-        // Step 4: Store results in context
+        // Step 5: Store results in context
         await context.setWebSearchResults(enrichedResults)
 
-        // Step 5: Format results — page content directly enriches snippets (no extra LLM call)
+        // Step 6: Format results — page content directly enriches snippets (no extra LLM call)
         let formattedResults = formatSearchResults(enrichedResults)
 
         await context.emit(.stageStreamingContent(stageName: name, content: formattedResults))
@@ -127,12 +166,13 @@ public struct WebSearchStage: Stage {
             stageKind: .webSearch,
             content: formattedResults,
             bulletPoints: enrichedResults.prefix(5).map { "[\($0.title)] \(String($0.snippet.prefix(80)))" },
-            confidence: results.isEmpty ? 0.3 : 0.8,
+            confidence: allResults.isEmpty ? 0.3 : 0.8,
             metadata: [
                 "searchDecision": "searched",
                 "searchQuery": keywords,
-                "resultCount": "\(results.count)",
-                "pagesFetched": "\(successCount)"
+                "resultCount": "\(allResults.count)",
+                "pagesFetched": "\(successCount)",
+                "searchRounds": "\(actualRounds)"
             ]
         )
 
@@ -140,6 +180,58 @@ public struct WebSearchStage: Stage {
         await context.workingMemory.store(output: output, for: name)
 
         return output
+    }
+
+    // MARK: - Deep Search Evaluation
+
+    private func evaluateAndSuggestFollowUp(
+        query: String,
+        currentResults: [WebSearchResult],
+        context: PipelineContext
+    ) async throws -> String? {
+        let resultSummary = currentResults.prefix(5).enumerated().map { idx, r in
+            "[\(idx + 1)] \(r.title): \(String(r.snippet.prefix(80)))"
+        }.joined(separator: "\n")
+
+        let systemPrompt = "You evaluate web search results. Respond with one line only."
+        let userPrompt = """
+            Question: \(truncate(query, to: 300))
+
+            Search results:
+            \(resultSummary)
+
+            Are these results sufficient to answer the question?
+            If YES, respond: SUFFICIENT
+            If NO, respond with a better search query (keywords only, no explanation).
+            """
+
+        let response = try await context.modelProvider.generate(
+            systemPrompt: systemPrompt,
+            userPrompt: userPrompt
+        )
+
+        let cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .newlines)
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+
+        if cleaned.uppercased().contains("SUFFICIENT") || cleaned.isEmpty {
+            return nil
+        }
+
+        // Validate: should look like keywords, not a sentence
+        let looksLikeSentence = cleaned.count > 80
+            || cleaned.lowercased().hasPrefix("here ")
+            || cleaned.lowercased().hasPrefix("the ")
+            || cleaned.lowercased().hasPrefix("based on")
+            || cleaned.lowercased().hasPrefix("yes")
+            || cleaned.lowercased().hasPrefix("no,")
+            || cleaned.contains("keywords")
+        if looksLikeSentence {
+            return nil
+        }
+
+        return cleaned
     }
 
     // MARK: - Keyword Extraction
@@ -221,7 +313,12 @@ public func executeWebSearchIfEnabled(
 ) async throws -> StageOutput? {
     guard configuration.webSearchEnabled else { return nil }
 
-    let stage = WebSearchStage(maxResults: configuration.maxSearchResults)
+    let pageFetchCount = configuration.maxSearchDepth > 1 ? 3 : 2
+    let stage = WebSearchStage(
+        maxResults: configuration.maxSearchResults,
+        maxPageFetchCount: pageFetchCount,
+        maxSearchDepth: configuration.maxSearchDepth
+    )
     await context.emit(.stageStarted(stageName: stage.name, stageKind: .webSearch, index: stageIndex))
 
     let input = await context.buildInput(query: query)

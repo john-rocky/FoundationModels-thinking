@@ -91,6 +91,9 @@ enum PipelineLogger {
         case .webContentExtracting:
             print("[WebSearch] Extracting core information...")
 
+        case .deepSearchRoundStarted(let round, let keywords):
+            print("[DeepSearch] Round \(round): \(keywords)")
+
         case .autoClassified(let kind):
             print("\n\(divider)")
             print("[Auto] Selected: \(kind.displayName)")

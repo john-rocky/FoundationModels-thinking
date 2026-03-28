@@ -9,6 +9,7 @@ public struct PipelineConfiguration: Sendable, Codable {
     public var webSearchEnabled: Bool
     public var maxSearchResults: Int
     public var webSearchContextBudget: Int
+    public var maxSearchDepth: Int
 
     public init(
         maxStages: Int = 20,
@@ -16,7 +17,8 @@ public struct PipelineConfiguration: Sendable, Codable {
         branchCount: Int = 3,
         webSearchEnabled: Bool = false,
         maxSearchResults: Int = 5,
-        webSearchContextBudget: Int = 2000
+        webSearchContextBudget: Int = 2000,
+        maxSearchDepth: Int = 1
     ) {
         self.maxStages = maxStages
         self.maxRetries = maxRetries
@@ -24,6 +26,7 @@ public struct PipelineConfiguration: Sendable, Codable {
         self.webSearchEnabled = webSearchEnabled
         self.maxSearchResults = maxSearchResults
         self.webSearchContextBudget = webSearchContextBudget
+        self.maxSearchDepth = maxSearchDepth
     }
 
     public static let `default` = PipelineConfiguration()

@@ -29,7 +29,12 @@ public struct DirectPipeline: Pipeline, Sendable {
         // Optional: Web Search
         var webSearchContent = ""
         if configuration.webSearchEnabled {
-            let stage = WebSearchStage(maxResults: configuration.maxSearchResults)
+            let pageFetchCount = configuration.maxSearchDepth > 1 ? 3 : 2
+            let stage = WebSearchStage(
+                maxResults: configuration.maxSearchResults,
+                maxPageFetchCount: pageFetchCount,
+                maxSearchDepth: configuration.maxSearchDepth
+            )
             await context.emit(.stageStarted(stageName: stage.name, stageKind: .webSearch, index: 0))
             do {
                 let input = await context.buildInput(query: query)
