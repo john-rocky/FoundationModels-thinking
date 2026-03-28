@@ -118,14 +118,10 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 context: context
             )
 
-            // Quality gate: use Verify only if it's better than Solve.
-            // If Verify is garbage (too short, refusal, code when not asked), keep Solve.
-            let finalRaw: String
-            if isUsableResponse(verifyRaw, solveRaw: solveRaw) {
-                finalRaw = verifyRaw
-            } else {
-                finalRaw = solveRaw
-            }
+            // If Verify refused (safety filter), fall back to Solve
+            let refusals = ["i cannot", "i can't", "i apologize", "申し訳", "お答えできません"]
+            let isRefusal = refusals.contains { verifyRaw.lowercased().contains($0) }
+            let finalRaw = isRefusal ? solveRaw : verifyRaw
 
             let verifyOutput = parseOutput(raw: finalRaw, kind: .finalize)
             allOutputs.append(verifyOutput)
@@ -158,29 +154,5 @@ public struct RethinkPipeline: Pipeline, Sendable {
         await context.emit(.pipelineCompleted(result: result))
         await context.finishEventStream()
         return result
-    }
-
-    /// Check if Verify output is usable, or if Solve was better.
-    private func isUsableResponse(_ verify: String, solveRaw: String) -> Bool {
-        let v = verify.trimmingCharacters(in: .whitespacesAndNewlines)
-        let s = solveRaw.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Refusal → not usable
-        let refusals = ["i cannot", "i can't", "i apologize", "申し訳", "お答えできません"]
-        if refusals.contains(where: { v.lowercased().contains($0) }) {
-            return false
-        }
-
-        // Too short compared to Solve → probably degraded
-        if v.count < s.count / 3 && s.count > 50 {
-            return false
-        }
-
-        // Code output when Solve was natural language → wrong format
-        if v.hasPrefix("```") && !s.hasPrefix("```") && !s.contains("code") {
-            return false
-        }
-
-        return true
     }
 }
