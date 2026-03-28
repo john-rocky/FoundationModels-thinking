@@ -79,7 +79,7 @@ struct ChatView: View {
                     proxy.scrollTo("thinking", anchor: .bottom)
                 }
             }
-            .onChange(of: viewModel.streamingAnswerContent.count / 50) {
+            .onChange(of: viewModel.streamingAnswerContent.count / 200) {
                 if !viewModel.streamingAnswerContent.isEmpty {
                     proxy.scrollTo("streaming-answer", anchor: .bottom)
                 }
