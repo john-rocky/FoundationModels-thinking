@@ -13,9 +13,9 @@ public struct PipelineClassifier: Sendable {
         if let heuristic = heuristicClassify(query) {
             return heuristic
         }
-        // Default: most queries are informational/conversational → Direct is best.
-        // Rethink only helps for multi-step reasoning problems.
-        return .direct
+        // Default to Rethink — Verify stage now improves any response,
+        // not just reasoning problems. Quality gate prevents degradation.
+        return .rethink
     }
 
     // MARK: - Heuristic Classification

@@ -98,14 +98,17 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
             let verifySystem = localizedSystemPrompt(
-                "You verify answers by solving problems independently. Be thorough but concise.",
+                "You are a helpful assistant. Review the draft response below and improve it. Fix any errors, remove unnecessary content, and make it clear and natural. Write the improved version directly.",
                 language: context.language
             )
+            let solveSummary = truncate(solveRaw, to: 800)
             let verifyPrompt = """
-                Question: \(query)
-                Proposed response: \(proposedAnswer)
+                User's question: \(query)
 
-                Check if this response is correct and complete. If you find issues, provide a corrected version. If it's good, refine and improve it.
+                Draft response:
+                \(solveSummary)
+
+                Write an improved version of this response. Keep what is correct, fix what is wrong, and make it concise and natural.
                 """
 
             let verifyRaw = try await streamingGenerate(
