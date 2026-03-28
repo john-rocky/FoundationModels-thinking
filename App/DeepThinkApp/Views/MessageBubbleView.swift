@@ -19,32 +19,38 @@ struct MessageBubbleView: View {
                             .textSelection(.enabled)
                     }
 
-                    if let result = message.pipelineResult {
+                    // Show pipeline metadata (from live result or persisted data)
+                    if let name = message.pipelineResult?.pipelineName ?? message.pipelineName {
+                        let confidence = message.pipelineResult?.finalOutput.confidence ?? message.pipelineConfidence ?? 0
+                        let duration = message.pipelineResult?.totalDuration ?? message.pipelineDuration ?? 0
+
                         HStack(spacing: 12) {
-                            Label(result.pipelineName, systemImage: "arrow.triangle.branch")
+                            Label(name, systemImage: "arrow.triangle.branch")
                             Label(
-                                String(format: "%.0f%%", result.finalOutput.confidence * 100),
+                                String(format: "%.0f%%", confidence * 100),
                                 systemImage: "gauge"
                             )
                             Label(
-                                String(format: "%.1fs", result.totalDuration),
+                                String(format: "%.1fs", duration),
                                 systemImage: "clock"
                             )
                         }
                         .font(.caption2)
                         .foregroundStyle(.secondary)
 
-                        Button {
-                            showTrace.toggle()
-                        } label: {
-                            Label(
-                                showTrace ? "Hide Trace" : "Show Trace",
-                                systemImage: showTrace ? "chevron.up" : "chevron.down"
-                            )
-                            .font(.caption)
+                        if message.pipelineResult != nil {
+                            Button {
+                                showTrace.toggle()
+                            } label: {
+                                Label(
+                                    showTrace ? "Hide Trace" : "Show Trace",
+                                    systemImage: showTrace ? "chevron.up" : "chevron.down"
+                                )
+                                .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.tint)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.tint)
                     }
                 }
                 .padding(12)

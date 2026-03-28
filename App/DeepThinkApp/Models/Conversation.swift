@@ -8,10 +8,21 @@ struct ChatMessage: Identifiable, Sendable, Codable {
     let role: MessageRole
     let content: String
     let timestamp: Date
-    // PipelineResult is not persisted (too large, transient)
 
+    // Pipeline metadata persisted for UI display
+    let pipelineName: String?
+    let pipelineConfidence: Double?
+    let pipelineDuration: TimeInterval?
+
+    // Transient: full result only available during current session
     var pipelineResult: PipelineResult? {
-        get { nil }
+        get { _pipelineResult }
+    }
+    private var _pipelineResult: PipelineResult?
+
+    enum CodingKeys: String, CodingKey {
+        case id, role, content, timestamp
+        case pipelineName, pipelineConfidence, pipelineDuration
     }
 
     init(
@@ -25,6 +36,10 @@ struct ChatMessage: Identifiable, Sendable, Codable {
         self.role = role
         self.content = content
         self.timestamp = timestamp
+        self._pipelineResult = pipelineResult
+        self.pipelineName = pipelineResult?.pipelineName
+        self.pipelineConfidence = pipelineResult?.finalOutput.confidence
+        self.pipelineDuration = pipelineResult?.totalDuration
     }
 }
 
