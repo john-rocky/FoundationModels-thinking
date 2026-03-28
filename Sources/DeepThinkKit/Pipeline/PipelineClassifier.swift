@@ -75,26 +75,4 @@ public struct PipelineClassifier: Sendable {
         // B and anything else → Rethink
         return .rethink
     }
-
-    /// Web search is ON by default. Only skip for queries that clearly don't need it.
-    public static func shouldWebSearch(_ query: String, conversationHistory: [(role: String, content: String)] = []) -> Bool {
-        let lower = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Skip web search for greetings and very short input
-        let skipPatterns = [
-            "hi", "hello", "hey", "thanks", "bye",
-            "こんにちは", "おはよう", "ありがとう", "よろしく",
-        ]
-        if lower.count < 10 && skipPatterns.contains(where: { lower.contains($0) }) {
-            return false
-        }
-
-        // Skip for pure math/calculation (no real-world knowledge needed)
-        if lower.contains("start with") && lower.contains("step") { return false }
-        if lower.contains("から始め") && lower.contains("繰り返") { return false }
-        if lower.allSatisfy({ $0.isNumber || $0.isWhitespace || "+-*/=()x".contains($0) }) { return false }
-
-        // Everything else → search
-        return true
-    }
 }
