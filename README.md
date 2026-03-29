@@ -2,16 +2,18 @@
 
 **Multi-pass reasoning and memory orchestration for Apple Foundation Models.**
 
-Instead of asking the model once and hoping for the best, DeepThinkKit lets you compose multiple stages — analysis, planning, solving, critique, revision, merging, and finalization — into structured reasoning pipelines.
+Instead of asking the model once and hoping for the best, DeepThinkKit lets you compose multiple stages — solving, verification, constraint extraction, deterministic solving, and explanation — into structured reasoning pipelines.
 
-It is designed as an **engineering lab** for testing how far device-scale Foundation Models can go with staged prompting, branching, critique loops, and external memory.
+It is designed as an **engineering lab** for testing how far device-scale Foundation Models can go with staged prompting, independent verification, and external memory.
 
 Ships with a ChatGPT-style SwiftUI app for iOS and macOS.
 
 ```
 Direct (single pass):    Query --> Response
 
-DeepThink (multi-pass):  Query --> Analyze --> Plan --> Solve --> Critique --> Revise --> Finalize
+Rethink (multi-pass):    Query --> Solve --> Verify (independent) --> Final Answer
+
+Verified (CSP):          Query --> Extract Constraints --> Deterministic Solve --> Explain
 ```
 
 ---
@@ -25,7 +27,8 @@ DeepThinkKit explores a different approach:
 - Split one query into multiple stages
 - Give each stage a clear role
 - Pass intermediate outputs to the next stage
-- Optionally branch, critique, revise, or aggregate
+- Verify answers independently in a fresh session
+- Optionally extract constraints and solve deterministically
 - Attach memory and trace the full execution
 
 The goal is not to pretend the model is larger than it is.
@@ -44,22 +47,64 @@ dependencies: [
 ]
 ```
 
+#### Basic Usage
+
 ```swift
 import DeepThinkKit
 
 let provider = FoundationModelProvider()
 let context = PipelineContext(modelProvider: provider)
+let pipeline = PipelineFactory.create(kind: .rethink)
 
-// CritiqueLoop: Analyze -> Solve -> Critique -> Revise -> Finalize
-let pipeline = PipelineFactory.create(kind: .critiqueLoop)
 let result = try await pipeline.execute(query: "Explain quantum computing to a 10-year-old", context: context)
-
 print(result.finalOutput.content)
+```
 
-// Inspect intermediate stage outputs
-for stage in result.stageOutputs {
-    print("[\(stage.stageKind.rawValue)] \(stage.content.prefix(100))...")
+#### Streaming with Real-Time UI Updates
+
+```swift
+import DeepThinkKit
+
+let provider = FoundationModelProvider()
+let context = PipelineContext(modelProvider: provider)
+let pipeline = PipelineFactory.create(kind: .rethink)
+
+// Set up event stream
+let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
+await context.setEventContinuation(continuation)
+
+// Run pipeline in background
+Task.detached {
+    let result = try await pipeline.execute(query: "Why is the sky blue?", context: context)
+    await context.finishEventStream()
 }
+
+// Consume events for real-time UI
+for await event in stream {
+    switch event {
+    case .pipelineStarted(let name, let stageCount):
+        print("Pipeline: \(name) (\(stageCount) stages)")
+    case .stageStarted(let name, _, _):
+        print("  Starting: \(name)")
+    case .stageStreamingContent(let name, let content):
+        print("  [\(name)] \(content.suffix(40))...")
+    case .stageCompleted(let name, _, _, _):
+        print("  Completed: \(name)")
+    default:
+        break
+    }
+}
+```
+
+#### With Web Search
+
+```swift
+let config = PipelineConfiguration(
+    webSearchEnabled: true,
+    maxSearchDepth: 1        // Set to 3 for deep search
+)
+let pipeline = PipelineFactory.create(kind: .rethink, configuration: config)
+let result = try await pipeline.execute(query: "Latest Swift concurrency features", context: context)
 ```
 
 ### Running the App
@@ -80,68 +125,93 @@ Select the `DeepThinkApp_macOS` or `DeepThinkApp_iOS` scheme in Xcode and Run.
 
 | Pipeline | Flow | Best for |
 |---|---|---|
-| **Direct** | Query -> Response | Single-pass baseline for comparison |
-| **Sequential** | Analyze -> Plan -> Solve -> Finalize | Structured answers, complex linear tasks |
-| **CritiqueLoop** | Analyze -> Solve -> (Critique -> Revise) x N -> Finalize | Iterative refinement, catching omissions |
-| **BranchMerge** | Analyze -> {Solve A, B, C} -> Merge -> Finalize | Diversity of answers, parallel exploration |
-| **SelfConsistency** | Analyze -> {Solve 1, 2, 3} -> Aggregate -> Finalize | Consensus filtering, stability testing |
+| **Direct** | Query -> Response | Simple questions, greetings, fast baseline |
+| **Rethink** | Solve -> Verify (independent) | General reasoning, fact-checking, accuracy |
+| **Verified** | Extract Constraints -> CSP Solve -> Explain | Logic puzzles, constraint problems, deterministic answers |
+| **Auto** | Classifies query, then routes to Direct / Rethink / Verified | Default mode — picks the best pipeline automatically |
 
-### CritiqueLoop in Detail
+### Rethink Pipeline
 
 ```
-User: "Organize the ethical challenges of AI"
+User: "What are the ethical challenges of AI?"
 
-[Analyze]   Identify the core question, required knowledge areas, hidden assumptions (no answering)
+[Solve]     Analyze the question and generate an answer with explicit state tracking
     |
-[Solve]     Generate an answer based on the analysis
+[Verify]    Re-solve independently in a fresh session, compare with original,
+            improve if the new answer is better
     |
-[Critique]  Verify factual accuracy, logical consistency, coverage, and clarity; flag issues
-    |
-[Revise]    Fix only what critique identified (keep everything else intact)
-    |
-    ^ (repeat if confidence is below threshold)
-    |
-[Finalize]  Remove internal notes and format for readability (content unchanged)
+--> Final Answer
 ```
+
+Each stage runs in a **fresh session** — no hidden conversational carry-over. The Verify stage independently re-solves the problem and compares both answers, keeping the stronger one.
+
+### Verified Pipeline (CSP)
+
+```
+User: "A is not next to B. C is before D. B is at position 3."
+
+[Extract]   Use LLM + @Generable to extract variables, domains, and constraints
+    |
+[Solve]     Run deterministic CSP solver (no LLM) — brute-force all valid assignments
+    |
+[Explain]   Generate human-readable explanation of the solution
+    |
+--> Final Answer
+```
+
+The Solve stage uses a **deterministic constraint solver**, not the LLM, so the answer is provably correct when constraints are extracted properly.
+
+### Auto Classification
+
+When `PipelineKind.auto` is selected, `PipelineClassifier` routes the query:
+
+- **Greetings / short input** -> Direct
+- **Math / puzzles / constraints** -> Verified
+- **Everything else** -> Rethink
+
+Classification uses heuristic pattern matching (no LLM call).
 
 ---
 
-## Stage Roles
+## Streaming Events
 
-Each stage has a narrow, role-specific responsibility:
+DeepThinkKit provides real-time pipeline events via `AsyncStream<PipelineEvent>` for building responsive UIs.
 
-- **Analyze** — Identifies the core question, hidden assumptions, constraints, and ambiguities
-- **Plan** — Designs how the answer should be structured
-- **Solve** — Produces the actual answer following the analysis and plan
-- **Critique** — Acts as a reviewer, pointing out weaknesses
-- **Revise** — Repairs only what critique identified
-- **Merge** — Combines the strongest parts from multiple parallel branches
-- **Aggregate** — Trusts majority agreement over isolated claims
-- **Finalize** — Formats the result without changing content
+### Event Types
 
-Each stage runs in a **fresh session** — no hidden conversational carry-over. All coordination happens through explicit context injection.
+| Event | When |
+|---|---|
+| `pipelineStarted(name, stageCount)` | Pipeline execution begins |
+| `stageStarted(name, kind, index)` | A stage begins execution |
+| `stageStreamingContent(name, content)` | Token-by-token streaming output (cumulative) |
+| `stageCompleted(name, kind, output, index)` | A stage finishes successfully |
+| `stageFailed(name, error)` | A stage fails |
+| `stageRetrying(name, attempt)` | A stage is being retried |
+| `webSearchStarted(keywords)` | Web search begins |
+| `webSearchCompleted(resultCount)` | Web search finished |
+| `webPageFetchStarted(count)` | Fetching web pages |
+| `deepSearchRoundStarted(round, keywords)` | Multi-round deep search |
+| `autoClassified(resolvedKind)` | Auto mode selected a pipeline |
+| `pipelineCompleted(result)` | Pipeline finished with result |
 
 ---
 
-## Comparing Pipelines
+## Web Search
+
+Pipelines can optionally perform web search using DuckDuckGo before answering.
 
 ```swift
-let comparator = StrategyComparator()
-let result = try await comparator.compare(
-    query: "Challenges and solutions for renewable energy",
-    pipelines: [
-        PipelineFactory.create(kind: .direct),
-        PipelineFactory.create(kind: .critiqueLoop),
-    ],
-    modelProvider: FoundationModelProvider()
+let config = PipelineConfiguration(
+    webSearchEnabled: true,
+    maxSearchResults: 5,
+    webSearchContextBudget: 2000,  // Max chars of search context injected into prompt
+    maxSearchDepth: 1              // 1 = single round, 3 = deep search with LLM evaluation
 )
-
-for (name, metrics) in result.results {
-    print("\(name): confidence=\(metrics.averageConfidence), latency=\(metrics.totalLatency)s")
-}
 ```
 
-The app's **Compare tab** provides a GUI for side-by-side comparison with latency bar charts, thinking overhead ratios, and output diffs.
+The `WebSearchStage` autonomously decides whether search is needed based on the query, extracts keywords, fetches pages, and injects relevant content into the prompt.
+
+Custom search providers can be implemented via the `WebSearchProvider` protocol.
 
 ---
 
@@ -164,11 +234,13 @@ try await memory.save(MemoryEntry(kind: .fact, content: "Project X deadline is e
 let hits = try await memory.search(MemorySearchQuery(text: "Project X", limit: 3))
 ```
 
+Memory entries have `.kind` (fact, decision, constraint, summary, critique, etc.), `.tags`, `.priority` (low/normal/high/pinned), and `.source` for traceability.
+
 ---
 
 ## Tracing
 
-Each run can record the full execution trace:
+Each run records the full execution trace:
 
 - Pipeline name and stage order
 - Inputs and recalled memory per stage
@@ -195,15 +267,42 @@ In the app, each message has a **Show Trace** button to inspect per-stage inputs
 
 ---
 
-## Retry and Convergence
+## Custom Model Provider
 
-Built-in controls keep multi-pass experiments bounded and debuggable:
+`ModelProvider` is a protocol — you can plug in any backend:
 
-- Retry a failed stage up to a configurable limit
-- Stop critique/revise loops after a maximum number of iterations
-- Stop when confidence reaches a target threshold
-- Stop when improvement falls below a minimum delta
-- Roll back to the best-so-far answer if quality degrades
+```swift
+public protocol ModelProvider: Sendable {
+    func generate(systemPrompt: String?, userPrompt: String) async throws -> String
+    func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error>
+}
+```
+
+`FoundationModelProvider` is the built-in implementation using Apple's on-device Foundation Models. The `generateStream` default implementation wraps `generate` in a single-yield stream, so you only need to implement `generate` for basic providers.
+
+---
+
+## Benchmarks
+
+DeepThinkKit includes a benchmark suite for comparing pipeline accuracy:
+
+```swift
+let runner = BenchmarkRunner()
+let report = await runner.run(
+    problems: BenchmarkProblem.standardSet,
+    pipelineKinds: [.direct, .rethink, .verified],
+    modelProvider: FoundationModelProvider(),
+    onProgress: { stage, current, total in
+        print("\(stage) \(current)/\(total)")
+    }
+)
+
+for (kind, accuracy) in report.pipelineAccuracies {
+    print("\(kind.displayName): \(String(format: "%.0f%%", accuracy * 100))")
+}
+```
+
+The app includes a **Benchmark tab** for running evaluations with progress UI and per-problem result inspection.
 
 ---
 
@@ -212,22 +311,21 @@ Built-in controls keep multi-pass experiments bounded and debuggable:
 ```
 +---------------------------------------------+
 |                  App Layer                   |
-|   SwiftUI Chat / Compare / Memory Browser   |
+|   SwiftUI Chat / Benchmark / Memory Browser  |
 +---------------------------------------------+
 |               DeepThinkKit                   |
 |                                              |
 |  Pipeline --> Stage --> ModelProvider         |
-|  (Direct,      (Analyze,   (FoundationModel  |
-|   Sequential,   Plan,       Provider)        |
-|   CritiqueLoop, Solve,                       |
-|   BranchMerge,  Critique,                    |
-|   SelfConsis.)  Revise,                      |
-|                 Finalize)                    |
+|  (Direct,      (Solve,     (Foundation       |
+|   Rethink,      Verify,     ModelProvider)    |
+|   Verified)     Extract,                     |
+|                 Explain,                     |
+|                 WebSearch)                   |
 |                                              |
-|  Memory <--> Trace <--> Evaluation           |
-|  (Session,     (Record,    (Metrics,          |
-|   Working,      Collector)  Comparator)       |
-|   LongTerm)                                  |
+|  PipelineEvent  Memory        Trace          |
+|  (AsyncStream)  (Session,     (Record,       |
+|                  Working,     Collector)      |
+|                  LongTerm)                   |
 +---------------------------------------------+
          |
          v
@@ -241,6 +339,8 @@ Built-in controls keep multi-pass experiments bounded and debuggable:
 - **Fresh sessions per stage** — No hidden shared chat history across stages
 - **Explicit context passing** — Previous outputs are summarized and injected intentionally
 - **Role-separated prompts** — Each stage is specialized, not overloaded
+- **Deterministic where possible** — CSP solver provides provably correct answers for constraint problems
+- **Streaming first** — Real-time events for responsive UIs
 - **Trace first** — Intermediate reasoning matters, not just the final answer
 - **Experiment-friendly** — Pipelines are easy to swap, compare, and extend
 
