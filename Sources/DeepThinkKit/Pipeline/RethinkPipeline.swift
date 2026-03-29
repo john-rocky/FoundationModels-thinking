@@ -98,24 +98,32 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            let proposedAnswer = AnswerExtractor.extract(from: solveRaw) ?? ""
+            _ = AnswerExtractor.extract(from: solveRaw)
 
             // --- Stage 2: Independent verify (fresh session, solves from scratch) ---
             await context.emit(.stageStarted(stageName: "Verify", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
             let verifySystem = localizedSystemPrompt(
-                "You are a helpful assistant. Review the draft response below and improve it. Fix any errors, remove unnecessary content, and make it clear and natural. Write the improved version directly.",
+                """
+                You are a careful verifier. Your job is to check whether the draft answer below is correct.
+                1. Re-solve the problem yourself from scratch. Work through every step independently.
+                2. Compare your answer with the draft. If they agree, keep the draft (clean it up if needed). \
+                If they disagree, use YOUR answer and explain why the draft was wrong.
+                3. Pay special attention to numerical calculations, off-by-one errors, and whether the final \
+                answer actually matches what the question asked.
+                Write the final verified answer directly.
+                """,
                 language: context.language
             )
             let solveSummary = truncate(solveRaw, to: 800)
             let verifyPrompt = """
                 User's question: \(query)
 
-                Draft response:
+                Draft answer to verify:
                 \(solveSummary)
 
-                Write an improved version of this response. Keep what is correct, fix what is wrong, and make it concise and natural.
+                First re-solve the problem yourself, then compare with the draft. Write the verified answer.
                 """
 
             let verifyRaw = try await streamingGenerate(
