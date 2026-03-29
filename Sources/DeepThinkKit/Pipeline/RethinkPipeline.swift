@@ -59,10 +59,9 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             let solveSystem = localizedSystemPrompt(
                 """
-                You are a friendly, helpful assistant.
+                You are a friendly, helpful assistant. For conversations, be natural and concise.
                 Before solving any problem, first identify what approach, formula, or concept is needed.
-                Then solve step by step, tracking state at each step.
-                For conversations, be natural and concise.
+                Solve using equations when possible. Write State: [values] after each reasoning step.
                 If you are unsure, say so honestly instead of guessing.
                 """,
                 language: context.language
@@ -98,8 +97,6 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            let solveAnswer = AnswerExtractor.extract(from: solveRaw)
-
             // --- Stage 2: Verify (check existing work, don't re-solve) ---
             await context.emit(.stageStarted(stageName: "Verify", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
@@ -123,7 +120,7 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 Draft answer to check:
                 \(solveSummary)
 
-                Check this draft for errors. If correct, output it with clean formatting. If you find an error, fix only that error.
+                Check this draft for errors. Verify the final answer directly addresses what the question asked. If correct, output it with clean formatting. If you find an error, fix only that error.
                 """
 
             let verifyRaw = try await streamingGenerate(
@@ -135,17 +132,13 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             // Decide which output to use:
             // 1. If Verify refused (safety filter) → use Solve
-            // 2. If Verify changed the numerical answer → use Solve
-            //    (small models often introduce errors when rewriting)
-            // 3. Otherwise → use Verify (cleaned-up version)
+            // 2. Otherwise → use Verify (reviewed/corrected version)
+            //    Verify is in review mode (not re-solving), so trust its corrections.
             let refusals = ["i cannot", "i can't", "i apologize", "申し訳", "お答えできません"]
             let isRefusal = refusals.contains { verifyRaw.lowercased().contains($0) }
 
-            let verifyAnswer = AnswerExtractor.extract(from: verifyRaw)
-            let answerChanged = solveAnswer != nil && verifyAnswer != nil && solveAnswer != verifyAnswer
-
             let finalRaw: String
-            if isRefusal || answerChanged {
+            if isRefusal {
                 finalRaw = solveRaw
             } else {
                 finalRaw = verifyRaw

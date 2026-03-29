@@ -138,6 +138,24 @@ extension BenchmarkProblem {
             category: .multiStep,
             difficulty: .hard
         ),
+        // Catch-up / pursuit problem requiring relative velocity concept
+        // John head start: 4km/h × 1h = 4km. Relative speed: 6-4 = 2km/h. Time: 4/2 = 2h after Mike starts = 3h after John left
+        BenchmarkProblem(
+            id: "catchup",
+            question: "John walks at 4 km/h. One hour later, Mike chases him at 6 km/h. How many hours after John left does Mike catch up?",
+            expectedAnswer: "3",
+            acceptableAnswers: ["3", "3 hours", "3時間"],
+            category: .multiStep
+        ),
+        // Japanese version of catch-up problem
+        // 太郎の先行距離: 4×1=4km, 速度差: 6-4=2km/h, 追いつく: 4÷2=2h後(次郎出発から), 太郎出発から3時間
+        BenchmarkProblem(
+            id: "catchup-jp",
+            question: "太郎は時速4kmで歩いている。1時間後に次郎が時速6kmで追いかけた。太郎が出発して何時間後に追いつく？",
+            expectedAnswer: "3",
+            acceptableAnswers: ["3", "3時間", "3時間後"],
+            category: .multiStep
+        ),
     ]
 }
 
