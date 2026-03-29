@@ -44,12 +44,9 @@ struct ChatView: View {
                     WelcomeView()
                 }
 
-                if viewModel.isProcessing {
-                    ThinkingStreamView()
-                }
-
-                // Separate view so streamingAnswerContent observation
-                // does not invalidate the parent (ForEach message list).
+                // Both views handle their own visibility internally,
+                // keeping observation isolated from the parent ScrollView.
+                ThinkingStreamView()
                 StreamingAnswerView()
             }
             .padding()
@@ -59,11 +56,9 @@ struct ChatView: View {
         // items (triggering Markdown + AttributedString parsing), freezing
         // the main thread.
         .defaultScrollAnchor(.bottom)
-        .onTapGesture {
-            #if os(iOS)
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            #endif
-        }
+        #if os(iOS)
+        .scrollDismissesKeyboard(.interactively)
+        #endif
     }
 
     private var pipelineMenu: some View {
