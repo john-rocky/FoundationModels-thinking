@@ -35,12 +35,15 @@ public struct PipelineClassifier: Sendable {
             return nil // → falls through to default .rethink
         }
 
-        // Math / logic / puzzle → Verified
+        // Math / logic / puzzle / chase problems → Verified
         let puzzlePatterns = [
             "solve", "equation", "puzzle", "riddle",
             "x + ", "x - ", "x * ", "x = ",
+            "catches up", "catch up", "overtake",
+            "km/h", "mph", "m/s",
             "求めよ", "方程式", "パズル", "何通り",
             "AはBより", "全員異なる", "制約",
+            "追いつ", "時速", "分速", "秒速",
         ]
         if puzzlePatterns.contains(where: { lower.contains($0) }) {
             return .verified
@@ -52,12 +55,10 @@ public struct PipelineClassifier: Sendable {
             "start with", "if even", "if odd", "swap",
             "how many", "what is the remainder",
             "how long", "how far", "how much", "how fast",
-            "catches up", "catch up", "overtake",
-            "km/h", "mph", "m/s",
             "ステップ", "計算", "から始め", "偶数なら", "奇数なら",
             "何個", "何匹", "何人", "いくつ", "いくら",
             "何時間", "何分", "何秒", "何km", "何m",
-            "追いつ", "速さ", "時速", "分速",
+            "速さ",
         ]
         if reasoningPatterns.contains(where: { lower.contains($0) }) {
             return .rethink

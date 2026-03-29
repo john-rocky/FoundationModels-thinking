@@ -15,6 +15,16 @@ public struct DeterministicSolveStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
+        // Try rate/equation solving first
+        if let extractOutput = input.previousOutputs["Extract"],
+           extractOutput.metadata["rate_valid"] == "true",
+           let jsonStr = extractOutput.metadata["rate_json"],
+           let data = jsonStr.data(using: .utf8),
+           let problem = try? JSONDecoder().decode(RateProblem.self, from: data) {
+            return await solveRate(problem, context: context)
+        }
+
+        // Fall back to CSP solving
         guard let extractOutput = input.previousOutputs["Extract"],
               extractOutput.metadata["csp_valid"] == "true",
               let jsonStr = extractOutput.metadata["csp_json"],
@@ -63,5 +73,46 @@ public struct DeterministicSolveStage: Stage {
 
         await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
         return output
+    }
+
+    // MARK: - Rate/Chase Problem Solver
+
+    private func solveRate(_ problem: RateProblem, context: PipelineContext) async -> StageOutput {
+        let solver = EquationSolver()
+        guard let solution = solver.solve(problem) else {
+            let output = StageOutput(
+                stageKind: .solve,
+                content: "Cannot solve: faster speed must be greater than slower speed.",
+                confidence: 0.0,
+                metadata: ["solver_status": "parse_failed"]
+            )
+            await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
+            return output
+        }
+
+        let content = """
+            Equation: \(solution.equation)
+            \(solution.steps)
+            Answer: \(fmtAnswer(solution.totalTime)) hours after the first person left.
+            (The second person catches up \(fmtAnswer(solution.catchUpTime)) hours after starting.)
+            Meeting distance: \(fmtAnswer(solution.meetingDistance)) km from start.
+            """
+
+        await context.emit(.stageStreamingContent(stageName: name, content: content))
+
+        let output = StageOutput(
+            stageKind: .solve,
+            content: content,
+            confidence: 1.0,
+            metadata: ["solver_status": "success"]
+        )
+        await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
+        return output
+    }
+
+    private func fmtAnswer(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(value))
+            : String(format: "%.2g", value)
     }
 }
