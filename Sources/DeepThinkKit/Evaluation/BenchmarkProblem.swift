@@ -156,6 +156,74 @@ extension BenchmarkProblem {
             acceptableAnswers: ["3", "3時間", "3時間後"],
             category: .multiStep
         ),
+
+        // --- Thinking problems (non-calculation reasoning) ---
+
+        // Classic cognitive bias: intuitive wrong answer is $0.10
+        // bat = ball + 1.00, bat + ball = 1.10 → 2*ball = 0.10 → ball = 0.05
+        BenchmarkProblem(
+            id: "bat-ball",
+            question: "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost?",
+            expectedAnswer: "0.05",
+            acceptableAnswers: ["0.05", "$0.05", "5 cents", "5"],
+            category: .trickQuestion
+        ),
+        // Reading comprehension: "all but 9" means 9 remain, not 17-9=8
+        BenchmarkProblem(
+            id: "trick-sheep",
+            question: "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer still have?",
+            expectedAnswer: "9",
+            category: .trickQuestion
+        ),
+        // Spatial reasoning: N → turn right → E → turn right → S
+        BenchmarkProblem(
+            id: "direction",
+            question: "You are facing north. You turn right. Then you turn right again. What direction are you now facing?",
+            expectedAnswer: "south",
+            acceptableAnswers: ["south", "South", "S"],
+            category: .spatial
+        ),
+        // Inclusion-exclusion: 18 + 15 - 30 = 3
+        BenchmarkProblem(
+            id: "set-overlap",
+            question: "In a class of 30 students, 18 play soccer and 15 play basketball. Every student plays at least one sport. How many play both?",
+            expectedAnswer: "3",
+            category: .logic
+        ),
+        // Ordering from comparisons: Alice > Bob > Charlie → Alice is tallest
+        BenchmarkProblem(
+            id: "compare-order",
+            question: "Alice is taller than Bob. Bob is taller than Charlie. Who is the shortest?",
+            expectedAnswer: "Charlie",
+            acceptableAnswers: ["Charlie", "charlie"],
+            category: .logic
+        ),
+        // Syllogism validity: the conclusion does NOT follow
+        BenchmarkProblem(
+            id: "syllogism",
+            question: "All roses are flowers. Some flowers fade quickly. Does it follow that some roses fade quickly? Answer yes or no.",
+            expectedAnswer: "no",
+            acceptableAnswers: ["no", "No", "NO"],
+            category: .logic,
+            difficulty: .hard
+        ),
+        // Japanese: reading comprehension trick
+        // 「9匹以外」= 9匹が残る
+        BenchmarkProblem(
+            id: "trick-sheep-jp",
+            question: "農夫が羊を17匹飼っている。9匹以外が全部逃げた。残っている羊は何匹？",
+            expectedAnswer: "9",
+            category: .trickQuestion
+        ),
+        // Japanese: spatial reasoning
+        // 北→右→東→右→南
+        BenchmarkProblem(
+            id: "direction-jp",
+            question: "あなたは北を向いています。右に曲がります。もう一度右に曲がります。今どの方角を向いていますか？",
+            expectedAnswer: "南",
+            acceptableAnswers: ["南", "south", "South"],
+            category: .spatial
+        ),
     ]
 }
 
