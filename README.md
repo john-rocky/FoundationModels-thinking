@@ -20,10 +20,6 @@
   <img src="https://private-user-images.githubusercontent.com/23278992/570943422-50401d1a-5463-4a7a-93d7-d2b447712846.gif?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NzQ3NjE4OTcsIm5iZiI6MTc3NDc2MTU5NywicGF0aCI6Ii8yMzI3ODk5Mi81NzA5NDM0MjItNTA0MDFkMWEtNTQ2My00YTdhLTkzZDctZDJiNDQ3NzEyODQ2LmdpZj9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAzMjklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMzI5VDA1MTk1N1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTk5NTgyNjBmODY5MmI4NTY1NjUxYzQ5OTY1NDBkN2UzYTQzYTRjMmU3NzBhYmI5ZjVlZGI3NDUzY2U5MzAxM2EmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.TAxud-t34dMyrRpG95g0GxT-nhSYgIM-aN6UeRIAhas" alt="Chat Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </p>
 
-<p align="center">
-  <sub>Left: Multi-pass reasoning in action &nbsp;|&nbsp; Right: Real-time thinking process visualization</sub>
-</p>
-
 <br>
 
 ---
