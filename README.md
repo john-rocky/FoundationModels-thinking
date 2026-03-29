@@ -1,44 +1,71 @@
-# DeepThinkKit
+<p align="center">
+  <img src="assets/header.png" alt="DeepThinkKit" width="100%">
+</p>
 
-**Multi-pass reasoning and memory orchestration for Apple Foundation Models.**
+<p align="center">
+  <b>Make Apple Foundation Models think harder.</b><br>
+  Multi-pass reasoning & memory orchestration — fully on-device.
+</p>
 
-Instead of asking the model once and hoping for the best, DeepThinkKit lets you compose multiple stages — solving, verification, constraint extraction, deterministic solving, and explanation — into structured reasoning pipelines.
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Swift_Package-compatible-orange?style=flat-square&logo=swift" alt="Swift Package"></a>
+  <img src="https://img.shields.io/badge/platform-iOS_26%2B_%7C_macOS_26%2B-blue?style=flat-square&logo=apple" alt="Platform">
+  <img src="https://img.shields.io/badge/100%25-on--device-green?style=flat-square" alt="On-device">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-lightgrey?style=flat-square" alt="License"></a>
+</p>
 
-It is designed as an **engineering lab** for testing how far device-scale Foundation Models can go with staged prompting, independent verification, and external memory.
+<br>
 
-Ships with a ChatGPT-style SwiftUI app for iOS and macOS.
+<p align="center">
+  <img src="assets/demo-chat.gif" alt="Chat Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/demo-thinking.gif" alt="Thinking Process Demo" width="280">
+</p>
 
-```
-Direct (single pass):    Query --> Response
+<p align="center">
+  <sub>Left: Multi-pass reasoning in action &nbsp;|&nbsp; Right: Real-time thinking process visualization</sub>
+</p>
 
-Rethink (multi-pass):    Query --> Solve --> Verify (independent) --> Final Answer
-
-Verified (CSP):          Query --> Extract Constraints --> Deterministic Solve --> Explain
-```
+<br>
 
 ---
 
-## Why
+## The Problem
 
-Apple Foundation Models are great for lightweight, on-device tasks, but complex reasoning often breaks when everything is done in a single pass.
+Apple Foundation Models are fast, private, and free — but ask a hard question and the answer falls apart.
 
-DeepThinkKit explores a different approach:
+**DeepThinkKit fixes this.** Instead of one pass, it orchestrates multiple reasoning stages — solving, verifying, constraint-extracting, and explaining — each in an isolated session with no hidden context carry-over.
 
-- Split one query into multiple stages
-- Give each stage a clear role
-- Pass intermediate outputs to the next stage
-- Verify answers independently in a fresh session
-- Optionally extract constraints and solve deterministically
-- Attach memory and trace the full execution
+```
+Direct (1 pass):     Query ──────────────────────────────────> Answer
 
-The goal is not to pretend the model is larger than it is.
-The goal is to make reasoning behavior **observable, comparable, and hackable**.
+Rethink (2 pass):    Query ──> Solve ──> Verify (fresh) ──> Answer  ✅ More accurate
+
+Verified (CSP):      Query ──> Extract ──> Deterministic Solve ──> Explain  ✅ Provably correct
+```
+
+> The verifier doesn't see the solver's work. It re-solves independently and picks the stronger answer. No confirmation bias.
+
+---
+
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| 🧠 | **Multi-Pass Reasoning** | Split complex queries into Solve → Verify stages with independent sessions |
+| 🔒 | **Deterministic Solver** | CSP engine for logic puzzles — provably correct, no LLM guessing |
+| 🌐 | **Web Search** | Optional DuckDuckGo integration with multi-round deep search |
+| 💾 | **3-Layer Memory** | Session → Working → Long-Term persistent memory across runs |
+| 📡 | **Real-Time Streaming** | `AsyncStream<PipelineEvent>` — token-by-token UI updates |
+| 🔍 | **Full Execution Trace** | Inspect every stage's input, output, confidence, and duration |
+| 🌏 | **12 Languages** | Auto-detected, directive-injected language support |
+| 📊 | **Built-in Benchmarks** | Compare pipeline accuracy across problem categories |
+| 🔌 | **Pluggable Backends** | `ModelProvider` protocol — swap in any model |
 
 ---
 
 ## Quick Start
 
-### As a Swift Package
+### Install
 
 ```swift
 // Package.swift
@@ -47,67 +74,133 @@ dependencies: [
 ]
 ```
 
-#### Basic Usage
+### 3 Lines to Think Deeper
 
 ```swift
 import DeepThinkKit
 
-let provider = FoundationModelProvider()
-let context = PipelineContext(modelProvider: provider)
+let context = PipelineContext(modelProvider: FoundationModelProvider())
 let pipeline = PipelineFactory.create(kind: .rethink)
+let result = try await pipeline.execute(query: "Why do we dream?", context: context)
 
-let result = try await pipeline.execute(query: "Explain quantum computing to a 10-year-old", context: context)
-print(result.finalOutput.content)
+print(result.finalOutput.content) // Verified, multi-pass answer
 ```
 
-#### Streaming with Real-Time UI Updates
+### Stream Thinking in Real-Time
 
 ```swift
-import DeepThinkKit
-
-let provider = FoundationModelProvider()
-let context = PipelineContext(modelProvider: provider)
-let pipeline = PipelineFactory.create(kind: .rethink)
-
-// Set up event stream
 let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
 await context.setEventContinuation(continuation)
 
-// Run pipeline in background
-Task.detached {
+Task {
     let result = try await pipeline.execute(query: "Why is the sky blue?", context: context)
     await context.finishEventStream()
 }
 
-// Consume events for real-time UI
 for await event in stream {
     switch event {
-    case .pipelineStarted(let name, let stageCount):
-        print("Pipeline: \(name) (\(stageCount) stages)")
     case .stageStarted(let name, _, _):
-        print("  Starting: \(name)")
-    case .stageStreamingContent(let name, let content):
-        print("  [\(name)] \(content.suffix(40))...")
+        print("⟳ \(name)")
+    case .stageStreamingContent(_, let content):
+        print(content)  // Token-by-token output
     case .stageCompleted(let name, _, _, _):
-        print("  Completed: \(name)")
-    default:
-        break
+        print("✓ \(name)")
+    default: break
     }
 }
 ```
 
-#### With Web Search
+### Add Web Search
 
 ```swift
 let config = PipelineConfiguration(
     webSearchEnabled: true,
-    maxSearchDepth: 1        // Set to 3 for deep search
+    maxSearchDepth: 3  // Deep search: multiple rounds with LLM evaluation
 )
 let pipeline = PipelineFactory.create(kind: .rethink, configuration: config)
-let result = try await pipeline.execute(query: "Latest Swift concurrency features", context: context)
 ```
 
-### Running the App
+---
+
+## Pipelines
+
+<table>
+<tr><td width="25%"><b>Auto</b><br><sub>Default — routes automatically</sub></td><td>Classifies your query and picks the best pipeline. Just use <code>.auto</code> and forget about it.</td></tr>
+<tr><td><b>Direct</b><br><sub>Single pass</sub></td><td><code>Query → Response</code><br>Fast baseline. Good for greetings, simple Q&A.</td></tr>
+<tr><td><b>Rethink</b><br><sub>Solve + Verify</sub></td><td><code>Query → Solve → Verify (independent) → Answer</code><br>Each stage runs in a <b>fresh session</b>. The verifier re-solves independently and compares both answers.</td></tr>
+<tr><td><b>Verified</b><br><sub>Deterministic CSP</sub></td><td><code>Query → Extract Constraints → CSP Solve → Explain</code><br>The solver is deterministic — <b>no LLM involved</b>. Provably correct when constraints are extracted properly.</td></tr>
+</table>
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│               Your SwiftUI App                  │
+│         Chat  ·  Benchmark  ·  Memory           │
+├─────────────────────────────────────────────────┤
+│                DeepThinkKit                     │
+│                                                 │
+│   Pipeline ──> Stage ──> ModelProvider          │
+│   (Auto,       (Solve,    (FoundationModel      │
+│    Rethink,     Verify,    Provider)             │
+│    Verified,    Extract,                        │
+│    Direct)      Explain,                        │
+│                 WebSearch)                       │
+│                                                 │
+│   Events          Memory           Trace        │
+│   AsyncStream     Session/Working  Per-stage    │
+│                   /LongTerm        recording    │
+├─────────────────────────────────────────────────┤
+│        Apple Foundation Models (on-device)       │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## Memory
+
+Three layers, each with a clear lifetime:
+
+```swift
+// Persist facts across sessions
+let memory = LongTermMemory()
+try await memory.save(MemoryEntry(
+    kind: .fact,
+    content: "User prefers concise answers",
+    tags: ["preference"]
+))
+
+// Retrieve later
+let hits = try await memory.search(MemorySearchQuery(text: "preference", limit: 3))
+```
+
+| Layer | Lifetime | Role |
+|---|---|---|
+| **Session** | Single execution | Conversation history |
+| **Working** | Pipeline run | Intermediate stage outputs |
+| **LongTerm** | Persistent (JSON) | Facts, decisions, constraints across runs |
+
+---
+
+## Tracing
+
+Every run is fully observable. No black boxes.
+
+```swift
+let result = try await pipeline.execute(query: "...", context: context)
+
+for record in result.trace {
+    print("[\(record.stageName)] \(record.duration)s — confidence: \(record.confidence ?? 0)")
+}
+```
+
+The included app has a **Show Trace** button on every message — inspect per-stage inputs, outputs, duration, and confidence inline.
+
+---
+
+## Run the Demo App
 
 ```bash
 git clone https://github.com/john-rocky/DeepThinkKit.git
@@ -115,252 +208,45 @@ cd DeepThinkKit
 open DeepThinkApp.xcodeproj
 ```
 
-Select the `DeepThinkApp_macOS` or `DeepThinkApp_iOS` scheme in Xcode and Run.
+Select `DeepThinkApp_iOS` or `DeepThinkApp_macOS` and run.
 
-> **Requirements:** Xcode 26+, iOS 26+ / macOS 26+, Apple Silicon (M1+ / A17 Pro+), Apple Intelligence enabled
-
----
-
-## Pipelines
-
-| Pipeline | Flow | Best for |
-|---|---|---|
-| **Direct** | Query -> Response | Simple questions, greetings, fast baseline |
-| **Rethink** | Solve -> Verify (independent) | General reasoning, fact-checking, accuracy |
-| **Verified** | Extract Constraints -> CSP Solve -> Explain | Logic puzzles, constraint problems, deterministic answers |
-| **Auto** | Classifies query, then routes to Direct / Rethink / Verified | Default mode — picks the best pipeline automatically |
-
-### Rethink Pipeline
-
-```
-User: "What are the ethical challenges of AI?"
-
-[Solve]     Analyze the question and generate an answer with explicit state tracking
-    |
-[Verify]    Re-solve independently in a fresh session, compare with original,
-            improve if the new answer is better
-    |
---> Final Answer
-```
-
-Each stage runs in a **fresh session** — no hidden conversational carry-over. The Verify stage independently re-solves the problem and compares both answers, keeping the stronger one.
-
-### Verified Pipeline (CSP)
-
-```
-User: "A is not next to B. C is before D. B is at position 3."
-
-[Extract]   Use LLM + @Generable to extract variables, domains, and constraints
-    |
-[Solve]     Run deterministic CSP solver (no LLM) — brute-force all valid assignments
-    |
-[Explain]   Generate human-readable explanation of the solution
-    |
---> Final Answer
-```
-
-The Solve stage uses a **deterministic constraint solver**, not the LLM, so the answer is provably correct when constraints are extracted properly.
-
-### Auto Classification
-
-When `PipelineKind.auto` is selected, `PipelineClassifier` routes the query:
-
-- **Greetings / short input** -> Direct
-- **Math / puzzles / constraints** -> Verified
-- **Everything else** -> Rethink
-
-Classification uses heuristic pattern matching (no LLM call).
-
----
-
-## Streaming Events
-
-DeepThinkKit provides real-time pipeline events via `AsyncStream<PipelineEvent>` for building responsive UIs.
-
-### Event Types
-
-| Event | When |
-|---|---|
-| `pipelineStarted(name, stageCount)` | Pipeline execution begins |
-| `stageStarted(name, kind, index)` | A stage begins execution |
-| `stageStreamingContent(name, content)` | Token-by-token streaming output (cumulative) |
-| `stageCompleted(name, kind, output, index)` | A stage finishes successfully |
-| `stageFailed(name, error)` | A stage fails |
-| `stageRetrying(name, attempt)` | A stage is being retried |
-| `webSearchStarted(keywords)` | Web search begins |
-| `webSearchCompleted(resultCount)` | Web search finished |
-| `webPageFetchStarted(count)` | Fetching web pages |
-| `deepSearchRoundStarted(round, keywords)` | Multi-round deep search |
-| `autoClassified(resolvedKind)` | Auto mode selected a pipeline |
-| `pipelineCompleted(result)` | Pipeline finished with result |
-
----
-
-## Web Search
-
-Pipelines can optionally perform web search using DuckDuckGo before answering.
-
-```swift
-let config = PipelineConfiguration(
-    webSearchEnabled: true,
-    maxSearchResults: 5,
-    webSearchContextBudget: 2000,  // Max chars of search context injected into prompt
-    maxSearchDepth: 1              // 1 = single round, 3 = deep search with LLM evaluation
-)
-```
-
-The `WebSearchStage` autonomously decides whether search is needed based on the query, extracts keywords, fetches pages, and injects relevant content into the prompt.
-
-Custom search providers can be implemented via the `WebSearchProvider` protocol.
-
----
-
-## Memory Model
-
-DeepThinkKit uses a layered memory model to keep useful information outside the model and re-inject only what matters.
-
-| Layer | Lifetime | Purpose |
-|---|---|---|
-| **SessionMemory** | During execution | Recent conversation history |
-| **WorkingMemory** | During pipeline run | Intermediate stage outputs (analysis, plan, critique findings, candidate answers) |
-| **LongTermMemory** | Persistent (JSON file) | Facts, decisions, constraints, summaries stored and retrieved across runs |
-
-```swift
-// Save to long-term memory
-let memory = LongTermMemory()
-try await memory.save(MemoryEntry(kind: .fact, content: "Project X deadline is end of March", tags: ["project-x"]))
-
-// Retrieve in a future run
-let hits = try await memory.search(MemorySearchQuery(text: "Project X", limit: 3))
-```
-
-Memory entries have `.kind` (fact, decision, constraint, summary, critique, etc.), `.tags`, `.priority` (low/normal/high/pinned), and `.source` for traceability.
-
----
-
-## Tracing
-
-Each run records the full execution trace:
-
-- Pipeline name and stage order
-- Inputs and recalled memory per stage
-- Raw model output and parsed output
-- Retry attempts and convergence decisions
-- Confidence scores and duration
-- Failure reasons
-
-```swift
-let result = try await pipeline.execute(query: "...", context: context)
-
-for record in result.trace {
-    print("[\(record.stageName)] \(record.duration)s - confidence: \(record.confidence ?? 0)")
-    if !record.memoryHits.isEmpty {
-        print("  memory hits: \(record.memoryHits)")
-    }
-    if let error = record.error {
-        print("  ERROR: \(error)")
-    }
-}
-```
-
-In the app, each message has a **Show Trace** button to inspect per-stage inputs, outputs, duration, and confidence inline.
+The app includes:
+- ChatGPT-style conversation UI with pipeline selection
+- Real-time thinking process visualization
+- Execution trace inspector
+- Pipeline comparison mode
+- Memory browser
+- Benchmark runner
 
 ---
 
 ## Custom Model Provider
 
-`ModelProvider` is a protocol — you can plug in any backend:
+`ModelProvider` is a protocol — plug in any backend:
 
 ```swift
-public protocol ModelProvider: Sendable {
-    func generate(systemPrompt: String?, userPrompt: String) async throws -> String
-    func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error>
-}
-```
-
-`FoundationModelProvider` is the built-in implementation using Apple's on-device Foundation Models. The `generateStream` default implementation wraps `generate` in a single-yield stream, so you only need to implement `generate` for basic providers.
-
----
-
-## Benchmarks
-
-DeepThinkKit includes a benchmark suite for comparing pipeline accuracy:
-
-```swift
-let runner = BenchmarkRunner()
-let report = await runner.run(
-    problems: BenchmarkProblem.standardSet,
-    pipelineKinds: [.direct, .rethink, .verified],
-    modelProvider: FoundationModelProvider(),
-    onProgress: { stage, current, total in
-        print("\(stage) \(current)/\(total)")
+struct MyCloudProvider: ModelProvider {
+    func generate(systemPrompt: String?, userPrompt: String) async throws -> String {
+        // Your API call here
     }
-)
 
-for (kind, accuracy) in report.pipelineAccuracies {
-    print("\(kind.displayName): \(String(format: "%.0f%%", accuracy * 100))")
+    func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
+        // Your streaming API call here
+    }
 }
 ```
-
-The app includes a **Benchmark tab** for running evaluations with progress UI and per-problem result inspection.
-
----
-
-## Architecture
-
-```
-+---------------------------------------------+
-|                  App Layer                   |
-|   SwiftUI Chat / Benchmark / Memory Browser  |
-+---------------------------------------------+
-|               DeepThinkKit                   |
-|                                              |
-|  Pipeline --> Stage --> ModelProvider         |
-|  (Direct,      (Solve,     (Foundation       |
-|   Rethink,      Verify,     ModelProvider)    |
-|   Verified)     Extract,                     |
-|                 Explain,                     |
-|                 WebSearch)                   |
-|                                              |
-|  PipelineEvent  Memory        Trace          |
-|  (AsyncStream)  (Session,     (Record,       |
-|                  Working,     Collector)      |
-|                  LongTerm)                   |
-+---------------------------------------------+
-         |
-         v
-   Apple Foundation Models (on-device)
-```
-
----
-
-## Design Principles
-
-- **Fresh sessions per stage** — No hidden shared chat history across stages
-- **Explicit context passing** — Previous outputs are summarized and injected intentionally
-- **Role-separated prompts** — Each stage is specialized, not overloaded
-- **Deterministic where possible** — CSP solver provides provably correct answers for constraint problems
-- **Streaming first** — Real-time events for responsive UIs
-- **Trace first** — Intermediate reasoning matters, not just the final answer
-- **Experiment-friendly** — Pipelines are easy to swap, compare, and extend
-
----
-
-## What DeepThinkKit Is Not
-
-- A ChatGPT replacement
-- A general-purpose agent platform
-- A training or fine-tuning framework
-- A generic RAG backend
 
 ---
 
 ## Requirements
 
-- Xcode 26+
-- iOS 26.0+ / macOS 26.0+
-- Apple Silicon (M1+ / A17 Pro+)
-- Apple Intelligence enabled (Settings -> Apple Intelligence & Siri)
+| | Requirement |
+|---|---|
+| Xcode | 26+ |
+| iOS | 26.0+ |
+| macOS | 26.0+ |
+| Hardware | Apple Silicon (M1+ / A17 Pro+) |
+| Setting | Apple Intelligence enabled |
 
 ---
 
