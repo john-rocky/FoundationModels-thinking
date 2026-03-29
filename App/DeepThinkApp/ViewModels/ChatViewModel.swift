@@ -330,12 +330,8 @@ final class ChatViewModel {
             currentStreamingContent = ""
 
         case .stageStreamingContent(let name, let content):
-            if isFinalAnswerStage(name) {
-                streamingAnswerContent = content
-            } else {
-                currentStreamingStageName = name
-                currentStreamingContent = content
-            }
+            currentStreamingStageName = name
+            currentStreamingContent = content
 
         case .stageCompleted(let name, let kind, let output, _):
             log.info("  event stageCompleted(\(name))")
@@ -423,7 +419,4 @@ final class ChatViewModel {
         }
     }
 
-    private func isFinalAnswerStage(_ name: String) -> Bool {
-        ["Finalize", "Direct", "Explain", "Verify"].contains(name)
-    }
 }

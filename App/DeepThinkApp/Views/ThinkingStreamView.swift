@@ -84,12 +84,11 @@ struct ThinkingStreamView: View {
                             }
 
                             if !viewModel.currentStreamingContent.isEmpty {
-                                Text(viewModel.currentStreamingContent)
-                                    .font(.caption)
+                                Text(tailOfStreamingContent)
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, maxHeight: 200, alignment: .leading)
-                                    .lineLimit(12)
+                                    .frame(maxWidth: .infinity, maxHeight: 300, alignment: .leading)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -146,6 +145,18 @@ struct ThinkingStreamView: View {
             if case .completed = $0.status { return true }
             return false
         }
+    }
+
+    /// Show the last ~800 characters so the user always sees the newest
+    /// generated text, giving a stronger "thinking in progress" feel.
+    private var tailOfStreamingContent: String {
+        let content = viewModel.currentStreamingContent
+        guard content.count > 800 else { return content }
+        let tail = String(content.suffix(800))
+        if let firstNewline = tail.firstIndex(of: "\n") {
+            return "…" + String(tail[tail.index(after: firstNewline)...])
+        }
+        return "…" + tail
     }
 
     private var currentRunningStep: ThinkingStep? {
