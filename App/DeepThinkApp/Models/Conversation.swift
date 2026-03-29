@@ -3,7 +3,9 @@ import DeepThinkKit
 
 // MARK: - Chat Message
 
-struct ChatMessage: Identifiable, Sendable, Codable {
+struct ChatMessage: Identifiable, Sendable, Codable, Equatable {
+    static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool { lhs.id == rhs.id }
+
     let id: String
     let role: MessageRole
     let content: String

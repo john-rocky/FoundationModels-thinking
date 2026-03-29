@@ -33,62 +33,36 @@ struct ChatView: View {
     }
 
     private var messageScrollView: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    if let conversation = viewModel.currentConversation {
-                        ForEach(conversation.messages) { message in
-                            MessageBubbleView(message: message)
-                                .id(message.id)
-                        }
-                    } else {
-                        WelcomeView()
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                if let conversation = viewModel.currentConversation {
+                    ForEach(conversation.messages) { message in
+                        MessageBubbleView(message: message)
+                            .id(message.id)
                     }
-
-                    if viewModel.isProcessing {
-                        ThinkingStreamView()
-                            .id("thinking")
-                    }
-
-                    // Plain Text during streaming — Markdown only after completion.
-                    if !viewModel.streamingAnswerContent.isEmpty {
-                        HStack {
-                            Text(viewModel.streamingAnswerContent)
-                                .font(.body)
-                                .textSelection(.enabled)
-                                .padding(12)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(AppColors.secondaryBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                            Spacer(minLength: 60)
-                        }
-                        .id("streaming-answer")
-                    }
+                } else {
+                    WelcomeView()
                 }
-                .padding()
-            }
-            .onChange(of: viewModel.currentConversation?.messages.count) {
-                if let lastId = viewModel.currentConversation?.messages.last?.id {
-                    withAnimation {
-                        proxy.scrollTo(lastId, anchor: .bottom)
-                    }
-                }
-            }
-            .onChange(of: viewModel.thinkingSteps.count) {
+
                 if viewModel.isProcessing {
-                    proxy.scrollTo("thinking", anchor: .bottom)
+                    ThinkingStreamView()
                 }
+
+                // Separate view so streamingAnswerContent observation
+                // does not invalidate the parent (ForEach message list).
+                StreamingAnswerView()
             }
-            .onChange(of: viewModel.streamingAnswerContent.count / 200) {
-                if !viewModel.streamingAnswerContent.isEmpty {
-                    proxy.scrollTo("streaming-answer", anchor: .bottom)
-                }
-            }
-            .onTapGesture {
-                #if os(iOS)
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                #endif
-            }
+            .padding()
+        }
+        // Anchor to bottom — new content automatically stays visible.
+        // proxy.scrollTo was forcing LazyVStack to measure ALL off-screen
+        // items (triggering Markdown + AttributedString parsing), freezing
+        // the main thread.
+        .defaultScrollAnchor(.bottom)
+        .onTapGesture {
+            #if os(iOS)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            #endif
         }
     }
 
@@ -185,6 +159,30 @@ struct FeatureRow: View {
             VStack(alignment: .leading) {
                 Text(title).font(.headline)
                 Text(description).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - Streaming Answer (isolated observation boundary)
+
+/// Isolated view that observes only streamingAnswerContent.
+/// Prevents per-token changes from invalidating the parent view tree
+/// (which would re-diff the entire ForEach message list).
+struct StreamingAnswerView: View {
+    @Environment(ChatViewModel.self) private var viewModel
+
+    var body: some View {
+        if !viewModel.streamingAnswerContent.isEmpty {
+            HStack {
+                Text(viewModel.streamingAnswerContent)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppColors.secondaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                Spacer(minLength: 60)
             }
         }
     }

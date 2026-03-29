@@ -1,6 +1,9 @@
 import Foundation
 import SwiftUI
 import DeepThinkKit
+import os.log
+
+private let log = Logger(subsystem: "com.deepthink", category: "ChatVM")
 
 @Observable
 @MainActor
@@ -25,6 +28,8 @@ final class ChatViewModel {
         }
     }
     private var currentTask: Task<Void, Never>?
+    private var taskGeneration = 0
+    private var lastScrollContentLength = 0
 
     var appLanguage: AppLanguage {
         didSet {
@@ -114,25 +119,49 @@ final class ChatViewModel {
         isProcessing = true
 
         currentTask?.cancel()
+        taskGeneration += 1
+        let generation = taskGeneration
+        log.info("send gen=\(generation)")
         currentTask = Task {
-            await processMessage(text: text, conversationId: conversation.id)
+            await processMessage(text: text, conversationId: conversation.id, generation: generation)
         }
     }
 
-    private func processMessage(text: String, conversationId: String) async {
+    private func processMessage(text: String, conversationId: String, generation: Int) async {
+        log.info("[\(generation)] processMessage START")
+
+        // Heartbeat: logs every second while processing to detect MainActor stalls
+        let heartbeat = Task { @MainActor in
+            var tick = 0
+            while !Task.isCancelled {
+                tick += 1
+                log.info("[\(generation)] ♥ MainActor alive \(tick)s")
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+
         defer {
-            isProcessing = false
-            thinkingSteps = []
-            currentPipelineName = nil
-            expectedStageCount = 0
-            currentStreamingStageName = nil
-            currentStreamingContent = ""
-            streamingAnswerContent = ""
-            currentTask = nil
-            resolvedPipelineKind = nil
+            heartbeat.cancel()
+            // Only clean up if this is still the active task —
+            // prevents a cancelled task from wiping state set by a newer send().
+            if taskGeneration == generation {
+                log.info("[\(generation)] defer CLEANUP")
+                isProcessing = false
+                thinkingSteps = []
+                currentPipelineName = nil
+                expectedStageCount = 0
+                currentStreamingStageName = nil
+                currentStreamingContent = ""
+                streamingAnswerContent = ""
+                currentTask = nil
+                resolvedPipelineKind = nil
+            } else {
+                log.info("[\(generation)] defer SKIP (gen mismatch)")
+            }
         }
 
         do {
+            log.info("[\(generation)] creating provider")
             let modelProvider = FoundationModelProvider()
             let detectedLanguage = AppLanguage.detect(from: text)
             let context = PipelineContext(
@@ -141,6 +170,7 @@ final class ChatViewModel {
                 longTermMemory: longTermMemory
             )
 
+            log.info("[\(generation)] searching memory")
             let memoryHits = (try? await longTermMemory.search(
                 query: MemorySearchQuery(text: text, limit: 3)
             )) ?? []
@@ -156,6 +186,7 @@ final class ChatViewModel {
                 await context.setConversationHistory(history)
             }
 
+            log.info("[\(generation)] creating stream")
             let (stream, continuation) = AsyncStream<PipelineEvent>.makeStream()
             await context.setEventContinuation(continuation)
 
@@ -183,6 +214,7 @@ final class ChatViewModel {
                 configuration: config
             )
 
+            log.info("[\(generation)] launching pipeline (\(effectiveKind.rawValue))")
             let resultTask = Task.detached { () -> PipelineResult in
                 do {
                     let result = try await pipeline.execute(query: text, context: context)
@@ -194,12 +226,24 @@ final class ChatViewModel {
                 }
             }
 
-            // Consume events on MainActor for real-time UI updates
-            for await event in stream {
-                handlePipelineEvent(event)
+            // ── Consume events OFF MainActor ──
+            // The loop runs on the cooperative pool.  Each event hops to
+            // MainActor individually, so the main thread is never held
+            // for longer than a single handlePipelineEvent call.
+            log.info("[\(generation)] consuming events (nonisolated)")
+            await consumeEventStream(stream)
+            log.info("[\(generation)] events done")
+
+            // If cancelled (user sent a new message), stop the background pipeline too
+            guard !Task.isCancelled else {
+                log.info("[\(generation)] cancelled")
+                resultTask.cancel()
+                return
             }
 
+            log.info("[\(generation)] awaiting result")
             let result = try await resultTask.value
+            log.info("[\(generation)] got result")
 
             let assistantMessage = ChatMessage(
                 role: .assistant,
@@ -225,7 +269,15 @@ final class ChatViewModel {
                 try? await longTermMemory.save(entry)
             }
 
+            log.info("[\(generation)] processMessage END")
+
         } catch {
+            // Don't display cancellation as an error
+            guard !Task.isCancelled else {
+                log.info("[\(generation)] cancelled in catch")
+                return
+            }
+            log.error("[\(generation)] ERROR: \(error)")
             let description: String
             if let stageError = error as? StageError {
                 description = stageError.errorDescription ?? "\(stageError)"
@@ -246,13 +298,32 @@ final class ChatViewModel {
         }
     }
 
+    // MARK: - Off-MainActor Event Consumption
+
+    /// Consumes the pipeline event stream on the cooperative thread pool.
+    /// Each event is dispatched to MainActor individually via
+    /// `await self.handlePipelineEvent(event)`, so the main thread is
+    /// never monopolised by the iteration loop itself.
+    nonisolated private func consumeEventStream(_ stream: AsyncStream<PipelineEvent>) async {
+        var count = 0
+        for await event in stream {
+            count += 1
+            await self.handlePipelineEvent(event)
+        }
+        log.info("consumeEventStream finished after \(count) events")
+    }
+
+    // MARK: - Event Handling
+
     private func handlePipelineEvent(_ event: PipelineEvent) {
         switch event {
         case .pipelineStarted(let name, let count):
+            log.info("  event pipelineStarted(\(name), stages=\(count))")
             currentPipelineName = name
             expectedStageCount = count
 
         case .stageStarted(let name, let kind, let index):
+            log.info("  event stageStarted(\(name))")
             let step = ThinkingStep(stageName: name, stageKind: kind, index: index)
             thinkingSteps.append(step)
             currentStreamingStageName = name
@@ -267,6 +338,7 @@ final class ChatViewModel {
             }
 
         case .stageCompleted(let name, let kind, let output, _):
+            log.info("  event stageCompleted(\(name))")
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name && $0.output == nil }) {
                 thinkingSteps[idx].status = .completed
                 thinkingSteps[idx].output = output
@@ -301,6 +373,7 @@ final class ChatViewModel {
             }
 
         case .stageFailed(let name, let error):
+            log.error("  event stageFailed(\(name)): \(error)")
             if let idx = thinkingSteps.lastIndex(where: { $0.stageName == name }) {
                 thinkingSteps[idx].status = .failed(error)
             }

@@ -1,5 +1,8 @@
 import Foundation
 import FoundationModels
+import os.log
+
+private let modelLog = Logger(subsystem: "com.deepthink", category: "Model")
 
 // MARK: - Foundation Model Provider
 
@@ -38,11 +41,14 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
     public func generateStream(systemPrompt: String?, userPrompt: String) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
+                modelLog.info("generateStream Task START")
                 guard SystemLanguageModel.default.isAvailable else {
+                    modelLog.error("generateStream: model unavailable")
                     continuation.finish(throwing: StageError.modelUnavailable)
                     return
                 }
 
+                modelLog.info("generateStream: creating session")
                 let session: LanguageModelSession
                 if let systemPrompt, !systemPrompt.isEmpty {
                     let sanitized = Self.sanitizeInstructions(systemPrompt)
@@ -51,13 +57,19 @@ public final class FoundationModelProvider: ModelProvider, Sendable {
                     session = LanguageModelSession()
                 }
 
+                modelLog.info("generateStream: session ready, calling streamResponse")
                 do {
                     let stream = session.streamResponse(to: userPrompt)
+                    modelLog.info("generateStream: iterating tokens")
+                    var tokenCount = 0
                     for try await partial in stream {
+                        tokenCount += 1
                         continuation.yield(partial.content)
                     }
+                    modelLog.info("generateStream: done (\(tokenCount) tokens)")
                     continuation.finish()
                 } catch {
+                    modelLog.error("generateStream ERROR: \(error)")
                     Self.finishWithError(error, continuation: continuation)
                 }
             }
