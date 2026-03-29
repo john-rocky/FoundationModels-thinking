@@ -98,9 +98,9 @@ public struct RethinkPipeline: Pipeline, Sendable {
             await context.emit(.stageCompleted(stageName: "Solve", stageKind: .solve, output: solveOutput, index: stageIndex))
             stageIndex += 1
 
-            _ = AnswerExtractor.extract(from: solveRaw)
+            let solveAnswer = AnswerExtractor.extract(from: solveRaw)
 
-            // --- Stage 2: Independent verify (fresh session, solves from scratch) ---
+            // --- Stage 2: Verify (check existing work, don't re-solve) ---
             await context.emit(.stageStarted(stageName: "Verify", stageKind: .finalize, index: stageIndex))
             await context.traceCollector.record(event: .stageStarted(stage: "Verify", kind: .finalize, input: ""))
 
@@ -133,10 +133,23 @@ public struct RethinkPipeline: Pipeline, Sendable {
                 context: context
             )
 
-            // If Verify refused (safety filter), fall back to Solve
+            // Decide which output to use:
+            // 1. If Verify refused (safety filter) → use Solve
+            // 2. If Verify changed the numerical answer → use Solve
+            //    (small models often introduce errors when rewriting)
+            // 3. Otherwise → use Verify (cleaned-up version)
             let refusals = ["i cannot", "i can't", "i apologize", "申し訳", "お答えできません"]
             let isRefusal = refusals.contains { verifyRaw.lowercased().contains($0) }
-            let finalRaw = isRefusal ? solveRaw : verifyRaw
+
+            let verifyAnswer = AnswerExtractor.extract(from: verifyRaw)
+            let answerChanged = solveAnswer != nil && verifyAnswer != nil && solveAnswer != verifyAnswer
+
+            let finalRaw: String
+            if isRefusal || answerChanged {
+                finalRaw = solveRaw
+            } else {
+                finalRaw = verifyRaw
+            }
 
             let verifyOutput = parseOutput(raw: finalRaw, kind: .finalize)
             allOutputs.append(verifyOutput)
