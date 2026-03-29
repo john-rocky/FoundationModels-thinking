@@ -15,13 +15,13 @@ public struct DeterministicSolveStage: Stage {
             event: .stageStarted(stage: name, kind: kind, input: input.query)
         )
 
-        // Try rate/equation solving first
+        // Try equation solving first (pattern-matched from extracted values)
         if let extractOutput = input.previousOutputs["Extract"],
-           extractOutput.metadata["rate_valid"] == "true",
-           let jsonStr = extractOutput.metadata["rate_json"],
+           extractOutput.metadata["eq_valid"] == "true",
+           let jsonStr = extractOutput.metadata["eq_json"],
            let data = jsonStr.data(using: .utf8),
-           let problem = try? JSONDecoder().decode(RateProblem.self, from: data) {
-            return await solveRate(problem, context: context)
+           let extraction = try? JSONDecoder().decode(WordProblemExtraction.self, from: data) {
+            return await solveEquation(extraction, context: context)
         }
 
         // Fall back to CSP solving
@@ -77,12 +77,12 @@ public struct DeterministicSolveStage: Stage {
 
     // MARK: - Rate/Chase Problem Solver
 
-    private func solveRate(_ problem: RateProblem, context: PipelineContext) async -> StageOutput {
+    private func solveEquation(_ extraction: WordProblemExtraction, context: PipelineContext) async -> StageOutput {
         let solver = EquationSolver()
-        guard let solution = solver.solve(problem) else {
+        guard let solution = solver.solve(extraction) else {
             let output = StageOutput(
                 stageKind: .solve,
-                content: "Cannot solve: faster speed must be greater than slower speed.",
+                content: "Pattern not solvable deterministically. Falling back to LLM.",
                 confidence: 0.0,
                 metadata: ["solver_status": "parse_failed"]
             )
@@ -93,9 +93,7 @@ public struct DeterministicSolveStage: Stage {
         let content = """
             Equation: \(solution.equation)
             \(solution.steps)
-            Answer: \(fmtAnswer(solution.totalTime)) hours after the first person left.
-            (The second person catches up \(fmtAnswer(solution.catchUpTime)) hours after starting.)
-            Meeting distance: \(fmtAnswer(solution.meetingDistance)) km from start.
+            Answer: \(solution.answer) \(solution.unit)
             """
 
         await context.emit(.stageStreamingContent(stageName: name, content: content))
@@ -108,11 +106,5 @@ public struct DeterministicSolveStage: Stage {
         )
         await context.traceCollector.record(event: .stageCompleted(stage: name, output: output))
         return output
-    }
-
-    private func fmtAnswer(_ value: Double) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0
-            ? String(Int(value))
-            : String(format: "%.2g", value)
     }
 }

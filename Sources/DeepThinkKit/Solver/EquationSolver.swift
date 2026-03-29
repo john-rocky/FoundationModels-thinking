@@ -1,50 +1,66 @@
 import Foundation
 
-// MARK: - Equation Solver (Deterministic)
-// Solves chase/pursuit problems algebraically without LLM.
-//
-// Model:
-//   Slow person: distance = speedSlow * t
-//   Fast person: distance = speedFast * (t - delay)
-//   Meet when: speedSlow * t = speedFast * (t - delay)
-//   Solution:  t = speedFast * delay / (speedFast - speedSlow)
+// MARK: - Equation Solver (Deterministic, Pattern-Matching)
+// Detects solvable patterns from extracted tagged values and solves algebraically.
+// Returns nil if the pattern is not recognized — caller falls through to LLM.
 
 public struct EquationSolver: Sendable {
 
     public struct Solution: Sendable {
-        public let totalTime: Double
-        public let catchUpTime: Double
-        public let meetingDistance: Double
+        public let answer: Double
+        public let unit: String
         public let equation: String
         public let steps: String
     }
 
     public init() {}
 
-    public func solve(_ problem: RateProblem) -> Solution? {
-        let slow = problem.speedSlow
-        let fast = problem.speedFast
-        let delay = problem.delay
+    /// Try to solve from extracted values. Returns nil if pattern is unrecognized.
+    public func solve(_ extraction: WordProblemExtraction) -> Solution? {
+        let values = extraction.values
 
+        let speeds = values.filter { $0.role == "speed" }
+        let delays = values.filter { $0.role == "delay" || $0.role == "time" }
+
+        // Pattern: 2 speeds + 1 delay → chase/pursuit problem
+        if speeds.count == 2, let delay = delays.first {
+            return solveChase(speeds: speeds, delay: delay)
+        }
+
+        return nil
+    }
+
+    // MARK: - Chase / Pursuit
+
+    /// Two entities, one starts later at higher speed. When does the faster one catch up?
+    /// Model: slow * t = fast * (t - delay)  →  t = fast * delay / (fast - slow)
+    private func solveChase(speeds: [TaggedValue], delay: TaggedValue) -> Solution? {
+        let sorted = speeds.sorted { $0.value < $1.value }
+        let slow = sorted[0].value
+        let fast = sorted[1].value
+
+        let d = delay.value
         let diff = fast - slow
-        guard diff > 0, delay > 0 else { return nil }
+        guard diff > 0, d > 0 else { return nil }
 
-        let totalTime = fast * delay / diff
-        let catchUpTime = totalTime - delay
+        let totalTime = fast * d / diff
+        let catchUpTime = totalTime - d
         let meetingDistance = slow * totalTime
 
-        let equation = "\(fmt(slow))t = \(fmt(fast))(t - \(fmt(delay)))"
+        let equation = "\(fmt(slow))t = \(fmt(fast))(t - \(fmt(d)))"
         let steps = """
-            \(fmt(slow))t = \(fmt(fast))t - \(fmt(fast * delay))
-            \(fmt(slow))t - \(fmt(fast))t = -\(fmt(fast * delay))
-            \(fmt(-diff))t = -\(fmt(fast * delay))
-            t = \(fmt(fast * delay)) / \(fmt(diff)) = \(fmt(totalTime))
+            \(fmt(slow))t = \(fmt(fast))t - \(fmt(fast * d))
+            \(fmt(slow - fast))t = -\(fmt(fast * d))
+            t = \(fmt(fast * d)) / \(fmt(diff)) = \(fmt(totalTime))
+
+            Total time from first departure: \(fmt(totalTime)) hours
+            Second person's travel time: \(fmt(catchUpTime)) hours
+            Meeting distance: \(fmt(meetingDistance)) km
             """
 
         return Solution(
-            totalTime: totalTime,
-            catchUpTime: catchUpTime,
-            meetingDistance: meetingDistance,
+            answer: totalTime,
+            unit: "hours",
             equation: equation,
             steps: steps
         )

@@ -35,7 +35,9 @@ public struct PipelineClassifier: Sendable {
             return nil // → falls through to default .rethink
         }
 
-        // Math / logic / puzzle / chase problems → Verified
+        // Math / logic / puzzle → Verified
+        // Rate/chase problems are also routed here; the extraction stage
+        // auto-detects solvable patterns without keyword checks.
         let puzzlePatterns = [
             "solve", "equation", "puzzle", "riddle",
             "x + ", "x - ", "x * ", "x = ",

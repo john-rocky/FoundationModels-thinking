@@ -1,17 +1,22 @@
 import Foundation
 import FoundationModels
 
-// MARK: - Rate/Chase Problem Types (@Generable for structured LLM extraction)
-// The model only needs to extract numbers from the problem text.
-// The equation setup and solving is done programmatically.
+// MARK: - Word Problem Extraction (@Generable)
+// The model extracts tagged numerical values from the problem text.
+// The solver pattern-matches to determine if it can solve deterministically.
 
 @available(iOS 26.0, macOS 26.0, *)
 @Generable
-public struct RateProblem: Codable, Sendable {
-    @Guide(description: "Speed of the slower person/object, e.g. 4")
-    public var speedSlow: Double
-    @Guide(description: "Speed of the faster person/object, e.g. 6")
-    public var speedFast: Double
-    @Guide(description: "Time delay before the faster one starts, e.g. 1")
-    public var delay: Double
+public struct WordProblemExtraction: Codable, Sendable {
+    @Guide(description: "All numerical values from the problem with their roles")
+    public var values: [TaggedValue]
+}
+
+@available(iOS 26.0, macOS 26.0, *)
+@Generable
+public struct TaggedValue: Codable, Sendable {
+    @Guide(description: "Role: speed, time, delay, distance, count, price, rate, age, or weight")
+    public var role: String
+    @Guide(description: "The numerical value")
+    public var value: Double
 }

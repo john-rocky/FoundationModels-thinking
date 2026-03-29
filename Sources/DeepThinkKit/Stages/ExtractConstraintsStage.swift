@@ -20,8 +20,11 @@ public struct ExtractConstraintsStage: Stage {
             throw StageError.modelUnavailable
         }
 
-        // Try rate/chase problem extraction first (simpler for the model)
-        if let output = await tryRateExtraction(input: input, context: context) {
+        // Try general word problem extraction first.
+        // The @Generable extraction itself acts as the classifier:
+        // if the model can fill the struct, it's a word problem with numerical values.
+        // The solver then pattern-matches to decide if it can solve deterministically.
+        if let output = await tryWordProblemExtraction(input: input, context: context) {
             return output
         }
 
@@ -29,18 +32,11 @@ public struct ExtractConstraintsStage: Stage {
         return await extractCSP(input: input, context: context)
     }
 
-    // MARK: - Rate Problem Extraction
+    // MARK: - Word Problem Extraction (General)
 
-    private func tryRateExtraction(input: StageInput, context: PipelineContext) async -> StageOutput? {
-        let query = input.query.lowercased()
-        let rateKeywords = [
-            "km/h", "mph", "m/s", "catch up", "catches up", "overtake", "chase",
-            "時速", "分速", "秒速", "追いつ", "追いかけ",
-        ]
-        guard rateKeywords.contains(where: { query.contains($0) }) else { return nil }
-
+    private func tryWordProblemExtraction(input: StageInput, context: PipelineContext) async -> StageOutput? {
         let instructions = localizedSystemPrompt(
-            "Extract the two speeds and time delay from this pursuit problem.",
+            "Extract all numerical values from the problem. Tag each value with its role: speed, time, delay, distance, count, price, rate, age, or weight.",
             language: context.language
         )
         let session = LanguageModelSession(instructions: instructions)
@@ -48,19 +44,25 @@ public struct ExtractConstraintsStage: Stage {
         do {
             let response = try await session.respond(
                 to: truncate(input.query, to: 500),
-                generating: RateProblem.self
+                generating: WordProblemExtraction.self
             )
-            let problem = response.content
+            let extraction = response.content
+            guard !extraction.values.isEmpty else { return nil }
+
+            // Check if the equation solver recognizes a solvable pattern
+            let solver = EquationSolver()
+            guard solver.solve(extraction) != nil else { return nil }
+
+            let summary = extraction.values.map { "\($0.role): \($0.value)" }.joined(separator: ", ")
             await context.emit(.stageStreamingContent(
-                stageName: name, content: "Extracted rate problem: slow=\(problem.speedSlow), fast=\(problem.speedFast), delay=\(problem.delay)"
+                stageName: name, content: "Extracted: \(summary)"
             ))
 
-            var metadata: [String: String] = ["rate_valid": "true"]
-            if let json = try? JSONEncoder().encode(problem) {
-                metadata["rate_json"] = String(data: json, encoding: .utf8) ?? ""
+            var metadata: [String: String] = ["eq_valid": "true"]
+            if let json = try? JSONEncoder().encode(extraction) {
+                metadata["eq_json"] = String(data: json, encoding: .utf8) ?? ""
             }
 
-            let summary = "Rate problem: slow=\(problem.speedSlow), fast=\(problem.speedFast), delay=\(problem.delay)"
             let output = StageOutput(
                 stageKind: .analyze,
                 content: summary,
