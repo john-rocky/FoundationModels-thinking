@@ -1,10 +1,14 @@
 <p align="center">
-  <img src="assets/header.png" alt="DeepThinkKit" width="100%">
+  <img src="https://github.com/user-attachments/assets/8259bc35-5dfd-4bf1-b426-d2bfa0e27b61" alt="DeepThinkKit" width="100%">
 </p>
 
 <p align="center">
   <b>Make Apple Foundation Models think harder.</b><br>
   Multi-pass reasoning & memory orchestration — fully on-device.
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2432a573-cb7f-4de2-a038-1efec1ab8b5f" alt="DeepThinkKitRec" width="100%">
 </p>
 
 <p align="center">
