@@ -106,13 +106,13 @@ public struct RethinkPipeline: Pipeline, Sendable {
 
             let verifySystem = localizedSystemPrompt(
                 """
-                You are a careful verifier. Your job is to check whether the draft answer below is correct.
-                1. Re-solve the problem yourself from scratch. Work through every step independently.
-                2. Compare your answer with the draft. If they agree, keep the draft (clean it up if needed). \
-                If they disagree, use YOUR answer and explain why the draft was wrong.
-                3. Pay special attention to numerical calculations, off-by-one errors, and whether the final \
-                answer actually matches what the question asked.
-                Write the final verified answer directly.
+                You are a reviewer who checks existing work. \
+                Read the draft answer and verify: \
+                Is the reasoning sound? Does each step follow from the previous? \
+                Are all calculations correct? Does the final answer match the calculations?
+                If the draft is correct, clean up the formatting and output it. \
+                If you find a specific error, fix that error while keeping everything else unchanged. \
+                Do not rewrite the response from scratch. Do not remove steps.
                 """,
                 language: context.language
             )
@@ -120,10 +120,10 @@ public struct RethinkPipeline: Pipeline, Sendable {
             let verifyPrompt = """
                 User's question: \(query)
 
-                Draft answer to verify:
+                Draft answer to check:
                 \(solveSummary)
 
-                First re-solve the problem yourself, then compare with the draft. Write the verified answer.
+                Check this draft for errors. If correct, output it with clean formatting. If you find an error, fix only that error.
                 """
 
             let verifyRaw = try await streamingGenerate(

@@ -46,13 +46,18 @@ public struct PipelineClassifier: Sendable {
             return .verified
         }
 
-        // Multi-step reasoning → Rethink
+        // Multi-step reasoning / math word problems → Rethink
         let reasoningPatterns = [
             "step 1", "step 2", "calculate", "compute",
             "start with", "if even", "if odd", "swap",
             "how many", "what is the remainder",
+            "how long", "how far", "how much", "how fast",
+            "catches up", "catch up", "overtake",
+            "km/h", "mph", "m/s",
             "ステップ", "計算", "から始め", "偶数なら", "奇数なら",
             "何個", "何匹", "何人", "いくつ", "いくら",
+            "何時間", "何分", "何秒", "何km", "何m",
+            "追いつ", "速さ", "時速", "分速",
         ]
         if reasoningPatterns.contains(where: { lower.contains($0) }) {
             return .rethink
