@@ -108,7 +108,7 @@ for await event in stream {
 ### Add Web Search
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/2432a573-cb7f-4de2-a038-1efec1ab8b5f" alt="Web Search Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/user-attachments/assets/3d3726d6-cadb-4ebd-90a5-30556df1abe0" alt="Web Search Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </p>
 
 ```swift
