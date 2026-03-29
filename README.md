@@ -8,10 +8,6 @@
 </p>
 
 <p align="center">
-  <img src="https://private-user-images.githubusercontent.com/23278992/570943422-50401d1a-5463-4a7a-93d7-d2b447712846.gif?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NzQ3NjE4OTcsIm5iZiI6MTc3NDc2MTU5NywicGF0aCI6Ii8yMzI3ODk5Mi81NzA5NDM0MjItNTA0MDFkMWEtNTQ2My00YTdhLTkzZDctZDJiNDQ3NzEyODQ2LmdpZj9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAzMjklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMzI5VDA1MTk1N1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTk5NTgyNjBmODY5MmI4NTY1NjUxYzQ5OTY1NDBkN2UzYTQzYTRjMmU3NzBhYmI5ZjVlZGI3NDUzY2U5MzAxM2EmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.TAxud-t34dMyrRpG95g0GxT-nhSYgIM-aN6UeRIAhas" alt="DeepThinkKitRec" width=300><img src="https://github.com/user-attachments/assets/2432a573-cb7f-4de2-a038-1efec1ab8b5f" alt="DeepThinkKitRec" width=300>
-</p>
-
-<p align="center">
   <a href="#quick-start"><img src="https://img.shields.io/badge/Swift_Package-compatible-orange?style=flat-square&logo=swift" alt="Swift Package"></a>
   <img src="https://img.shields.io/badge/platform-iOS_26%2B_%7C_macOS_26%2B-blue?style=flat-square&logo=apple" alt="Platform">
   <img src="https://img.shields.io/badge/100%25-on--device-green?style=flat-square" alt="On-device">
@@ -21,8 +17,7 @@
 <br>
 
 <p align="center">
-  <img src="assets/demo-chat.gif" alt="Chat Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/demo-thinking.gif" alt="Thinking Process Demo" width="280">
+  <img src="https://private-user-images.githubusercontent.com/23278992/570943422-50401d1a-5463-4a7a-93d7-d2b447712846.gif?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NzQ3NjE4OTcsIm5iZiI6MTc3NDc2MTU5NywicGF0aCI6Ii8yMzI3ODk5Mi81NzA5NDM0MjItNTA0MDFkMWEtNTQ2My00YTdhLTkzZDctZDJiNDQ3NzEyODQ2LmdpZj9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNjAzMjklMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwMzI5VDA1MTk1N1omWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTk5NTgyNjBmODY5MmI4NTY1NjUxYzQ5OTY1NDBkN2UzYTQzYTRjMmU3NzBhYmI5ZjVlZGI3NDUzY2U5MzAxM2EmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.TAxud-t34dMyrRpG95g0GxT-nhSYgIM-aN6UeRIAhas" alt="Chat Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 </p>
 
 <p align="center">
@@ -115,6 +110,10 @@ for await event in stream {
 ```
 
 ### Add Web Search
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2432a573-cb7f-4de2-a038-1efec1ab8b5f" alt="Web Search Demo" width="280">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</p>
 
 ```swift
 let config = PipelineConfiguration(
