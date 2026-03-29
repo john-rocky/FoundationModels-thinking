@@ -4,6 +4,7 @@ import DeepThinkKit
 struct ChatView: View {
     @Environment(ChatViewModel.self) private var viewModel
     @State private var showPipelineSelector = false
+    @State private var scrollPosition = ScrollPosition(edge: .bottom)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,14 +52,21 @@ struct ChatView: View {
             }
             .padding()
         }
-        // Anchor to bottom — new content automatically stays visible.
-        // proxy.scrollTo was forcing LazyVStack to measure ALL off-screen
-        // items (triggering Markdown + AttributedString parsing), freezing
-        // the main thread.
         .defaultScrollAnchor(.bottom)
+        .scrollPosition($scrollPosition)
         #if os(iOS)
         .scrollDismissesKeyboard(.interactively)
         #endif
+        // Scroll to bottom on key events.  scrollTo(edge:) is cheap —
+        // it sets contentOffset directly without measuring LazyVStack items.
+        .onChange(of: viewModel.currentConversation?.messages.count) {
+            scrollPosition.scrollTo(edge: .bottom)
+        }
+        .onChange(of: viewModel.isProcessing) {
+            if viewModel.isProcessing {
+                scrollPosition.scrollTo(edge: .bottom)
+            }
+        }
     }
 
     private var pipelineMenu: some View {
